@@ -1,31 +1,12 @@
-// Polyfills for pdf-parse in Node environment
-if (typeof Promise.withResolvers === 'undefined') {
-    // @ts-ignore
-    Promise.withResolvers = function () {
-        let resolve, reject;
-        const promise = new Promise((res, rej) => {
-            resolve = res;
-            reject = rej;
-        });
-        return { promise, resolve, reject };
-    };
-}
 
-// Minimal polyfill for DOMMatrix which pdfjs-dist (used by pdf-parse) might need
-if (!global.DOMMatrix) {
-    // @ts-ignore
-    global.DOMMatrix = class DOMMatrix {
-        constructor() { }
-        // Add methods if specifically needed, usually just existence is enough for load
-    } as any;
-}
-
-// @ts-ignore
-const pdfParse = require("pdf-parse");
 import mammoth from "mammoth";
+// @ts-ignore
+import PDFParser from "pdf2json";
 
-// ...
-
+/**
+ * Extracts raw text content from a file buffer.
+ * Supports PDF and DOCX formats.
+ */
 export async function extractText(fileBuffer: Buffer, fileType: string): Promise<string> {
     if (fileType === "application/pdf" || fileType.endsWith("pdf")) {
         return extractTextFromPDF(fileBuffer);
@@ -40,31 +21,27 @@ export async function extractText(fileBuffer: Buffer, fileType: string): Promise
 }
 
 async function extractTextFromPDF(buffer: Buffer): Promise<string> {
-    try {
-        let parser = pdfParse;
-        // Handle ES/CommonJS interop
-        if (typeof parser !== 'function' && parser.default) {
-            parser = parser.default;
-        }
+    return new Promise((resolve, reject) => {
+        try {
+            const pdfParser = new PDFParser(null, 1); // 1 = text content only
 
-        if (typeof parser !== 'function') {
-            // Fallback: If pdf-parse is purely an object but looks like the lib?
-            // Sometimes it exports a named function? No, usually default.
-            // Let's log keys if we fail
-            const keys = typeof parser === 'object' ? Object.keys(parser).join(', ') : typeof parser;
-            throw new Error(`pdf-parse export is not a function. Type: ${typeof parser}, Keys: ${keys}`);
-        }
+            pdfParser.on("pdfParser_dataError", (errData: any) => {
+                console.error("PDF2JSON Error:", errData);
+                reject(new Error(errData.parserError));
+            });
 
-        const data = await parser(buffer);
+            pdfParser.on("pdfParser_dataReady", (pdfData: any) => {
+                // pdfData.formImage.Pages[].Texts[].R[].T is where text is.
+                // But generally pdfParser.getRawTextContent() is efficient if available.
+                const rawText = pdfParser.getRawTextContent();
+                resolve(rawText);
+            });
 
-        if (!data || typeof data.text !== 'string') {
-            throw new Error("PDF parsed but no text content found.");
+            pdfParser.parseBuffer(buffer);
+        } catch (e) {
+            reject(e);
         }
-        return data.text;
-    } catch (error: any) {
-        console.error("PDF Extraction Error Detail:", error?.message || error);
-        throw new Error(`Failed to parse PDF file: ${error?.message || "Unknown error"}`);
-    }
+    });
 }
 
 async function extractTextFromDOCX(buffer: Buffer): Promise<string> {

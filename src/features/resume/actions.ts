@@ -80,8 +80,35 @@ export async function uploadResumeAction(formData: FormData): Promise<UploadResu
             return { success: false, error: "Failed to save analysis results." };
         }
 
+        // 5. UPDATE PROFILE with new skills
+        // Fetch current skills first to merge
+        const { data: profileData } = await supabase
+            .from("profiles")
+            .select("skills")
+            .eq("id", user.id)
+            .single();
+
+        const currentSkills = profileData?.skills || [];
+        const mergedSkills = Array.from(new Set([...currentSkills, ...skills]));
+
+        const { error: profileError } = await supabase
+            .from("profiles")
+            .update({
+                skills: mergedSkills,
+                // Update academic year/experience if detected?
+                // For now, let's just stick to skills as requested.
+            })
+            .eq("id", user.id);
+
+        if (profileError) {
+            console.error("Profile Update Error:", profileError);
+            // We don't fail the whole action if profile update fails, but we log it.
+        }
+
         revalidatePath("/resume");
-        return { success: true, message: "Resume uploaded and analyzed successfully." };
+        revalidatePath("/profile");
+        revalidatePath("/dashboard");
+        return { success: true, message: "Resume uploaded and analyzed successfully. Profile skills updated." };
 
     } catch (e: any) {
         console.error("Processing Error:", e);
