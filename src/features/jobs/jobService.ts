@@ -1,7 +1,5 @@
-/**
- * Job Service to handle fetching jobs from external APIs (Adzuna, Jooble, Remotive).
- * Normalizes the data into a common `JobListing` interface.
- */
+
+import { createClient } from "@/utils/supabase/server";
 
 export interface JobListing {
     id: string;
@@ -14,56 +12,108 @@ export interface JobListing {
     url: string;
     source: 'adzuna' | 'jooble' | 'remotive' | 'mock';
     posted_at?: string;
-    logo_url?: string; // Some APIs provide company logo
+    logo_url?: string;
+    job_type?: 'job' | 'internship';
 }
-
-import { normalizeLocation } from "@/features/jobs/locationNormalizer";
-import { validateLocation } from "@/features/jobs/locationValidator";
-
-
-
-
-import { createClient } from "@/utils/supabase/server";
 
 const ADZUNA_APP_ID = process.env.ADZUNA_APP_ID;
 const ADZUNA_APP_KEY = process.env.ADZUNA_APP_KEY;
 const JOOBLE_API_KEY = process.env.JOOBLE_API_KEY;
 
-// Default freshness: 1 day
-const DEFAULT_MAX_DAYS = 1;
+// Default freshness: 7 days for the main search, but user requests "now"
+const DEFAULT_MAX_DAYS = 7;
 
 /**
- * 1. SEARCH Jobs (Public Access)
- * Queries the internal database for jobs that match the criteria.
+ * Main Search Entry Point
+ * 1. Tries the Database first (Aggregated Cache).
+ * 2. If results are thin (< 5), it triggers a LIVE fetch from external APIs.
+ * 3. Saves live results to DB and returns them.
  */
-export async function searchJobs(query: string, location: string = '', country: string = 'in', workMode?: string, maxDays: number = DEFAULT_MAX_DAYS): Promise<JobListing[]> {
+export async function searchJobs(
+    query: string,
+    location: string = '',
+    country: string = 'in',
+    workMode?: string,
+    maxDays: number = DEFAULT_MAX_DAYS,
+    type: 'job' | 'internship' | 'all' = 'all'
+): Promise<JobListing[]> {
     const supabase = await createClient();
 
-    // Normalize basic search
-    let rpcQuery = supabase
+    // Build DB Query
+    let dbQuery = supabase
         .from('jobs')
         .select('*')
         .order('posted_date', { ascending: false })
-        .limit(50); // Cap at 50 results
+        .limit(40);
 
-    // Keyword Search
+    // Apply Filters
     if (query && query !== 'all') {
-        rpcQuery = rpcQuery.ilike('title', `%${query}%`);
+        dbQuery = dbQuery.or(`title.ilike.%${query}%,description.ilike.%${query}%`);
     }
 
-    // Location Filter
     if (location) {
-        rpcQuery = rpcQuery.ilike('location', `%${location}%`);
+        dbQuery = dbQuery.ilike('location', `%${location}%`);
     }
 
-    const { data, error } = await rpcQuery;
-
-    if (error) {
-        console.error("DB Search Error", error);
-        return [];
+    if (type !== 'all') {
+        dbQuery = dbQuery.eq('job_type', type);
     }
 
-    return (data || []).map((job: any) => ({
+    const { data: dbJobs, error } = await dbQuery;
+
+    // If we have plenty of fresh jobs in DB, return them
+    if (!error && dbJobs && dbJobs.length >= 8) {
+        return mapDbJobs(dbJobs);
+    }
+
+    // FALLBACK: Not enough results in DB? Fetch from APIs LIVE
+    console.log(`[JobService] Thin results for "${query}" (${dbJobs?.length || 0}). Triggering LIVE fetch...`);
+
+    // Transform query for live search if it's too specific
+    const liveQuery = query || "Software Engineer";
+    const externalJobs = await fetchExternalJobs(liveQuery, location, country, workMode);
+
+    if (externalJobs.length > 0) {
+        // Map to DB Schema and Save (Sync)
+        const dbRows = externalJobs.map(j => ({
+            title: j.title,
+            company: j.company,
+            location: j.location,
+            description: j.description?.substring(0, 10000),
+            url: j.url,
+            source: j.source,
+            source_id: j.id,
+            posted_date: j.posted_at ? new Date(j.posted_at).toISOString() : new Date().toISOString(),
+            salary_min: j.salary_min,
+            salary_max: j.salary_max,
+            job_type: (type === 'internship' || j.title.toLowerCase().includes('intern')) ? 'internship' : 'job'
+        }));
+
+        // Upsert silently
+        await supabase.from('jobs').upsert(dbRows, {
+            onConflict: 'source,source_id',
+            ignoreDuplicates: true
+        });
+
+        // Filter valid types for return
+        const filteredLive = externalJobs.filter(j => {
+            if (type === 'all') return true;
+            const isIntern = j.title.toLowerCase().includes('intern');
+            return type === 'internship' ? isIntern : !isIntern;
+        });
+
+        // Merge with existing DB jobs for maximum variety, then deduplicate
+        const merged = [...mapDbJobs(dbJobs || []), ...filteredLive];
+        const unique = Array.from(new Map(merged.map(item => [item.url, item])).values());
+
+        return unique.slice(0, 40);
+    }
+
+    return mapDbJobs(dbJobs || []);
+}
+
+function mapDbJobs(data: any[]): JobListing[] {
+    return data.map((job: any) => ({
         id: job.source_id || job.id,
         title: job.title,
         company: job.company,
@@ -74,174 +124,87 @@ export async function searchJobs(query: string, location: string = '', country: 
         url: job.url,
         source: job.source as any,
         posted_at: job.posted_date,
-        logo_url: undefined
+        job_type: job.job_type
     }));
 }
 
 /**
- * 2. INGEST Jobs (Cron Admin Access)
- * Fetches from External APIs and saves to DB.
+ * Cron/Ingest Handler
  */
 export async function ingestGlobalJobs() {
-    const supabase = await createClient();
-
-    // A. Define "Popular Queries" to scrape regularly
     const queries = [
-        // Generic Roles
-        "Software Engineer", "Frontend Developer", "Backend Developer", "Full Stack Developer",
-        "Data Scientist", "Product Manager", "UI UX Designer", "DevOps Engineer",
-
-        // Internships (Explicit)
-        "Software Engineering Intern", "Data Science Intern", "Product Management Intern",
-        "Marketing Intern", "Sales Intern", "Generic Intern",
-
-        // Tech Stacks (for better profile matching)
-        "React Developer", "Node.js Developer", "Python Developer", "Java Developer"
+        "Software Engineer", "Frontend Developer", "Backend Developer", "Full Stack Developer", "Data Scientist", "DevOps Engineer",
+        "Software Engineering Intern", "Data Science Intern", "Generic Intern",
+        "React", "Nodejs", "Python", "Java"
     ];
-
     const countries = ["in", "us", "gb", "remote"];
-
-    let totalIngested = 0;
-
+    let count = 0;
     for (const q of queries) {
         for (const c of countries) {
-            const jobs = await fetchExternalJobs(q, '', c);
-
-            if (jobs.length > 0) {
-                const dbRows = jobs.map(j => ({
-                    title: j.title,
-                    company: j.company,
-                    location: j.location,
-                    description: j.description?.substring(0, 10000),
-                    url: j.url,
-                    source: j.source,
-                    source_id: j.id,
-                    posted_date: j.posted_at ? new Date(j.posted_at).toISOString() : new Date().toISOString(),
-                    salary_min: j.salary_min,
-                    salary_max: j.salary_max,
-                    job_type: q.toLowerCase().includes('intern') ? 'internship' : 'job'
-                }));
-
-                const { error } = await supabase.from('jobs').upsert(dbRows, {
-                    onConflict: 'source,source_id',
-                    ignoreDuplicates: true
-                });
-
-                if (!error) totalIngested += jobs.length;
-                else console.error(`Failed to ingest ${q} in ${c}:`, error.message);
-            }
+            const jobs = await searchJobs(q, '', c, undefined, 7, q.toLowerCase().includes('intern') ? 'internship' : 'job');
+            count += jobs.length;
         }
     }
-    return totalIngested;
+    return count;
 }
 
+// --- INTERNAL LIVE FETCHERS ---
 
-// --- INTERNAL FETCHERS ---
-
-async function fetchExternalJobs(query: string, location: string = '', country: string = 'in', workMode?: string): Promise<JobListing[]> {
+async function fetchExternalJobs(query: string, location: string, country: string, workMode?: string): Promise<JobListing[]> {
     const promises = [
         fetchFromAdzuna(query, location, country, workMode),
         fetchFromJooble(query, location, country, workMode),
         fetchFromRemotive(query, location, country, workMode)
     ];
-
-    const results = await Promise.allSettled(promises);
+    const res = await Promise.allSettled(promises);
     const jobs: JobListing[] = [];
-
-    results.forEach(res => {
-        if (res.status === 'fulfilled') {
-            jobs.push(...res.value);
-        }
-    });
-
+    res.forEach(r => { if (r.status === 'fulfilled') jobs.push(...r.value); });
     return jobs;
 }
 
 async function fetchFromAdzuna(query: string, location: string, country: string, workMode?: string): Promise<JobListing[]> {
     if (!ADZUNA_APP_ID || !ADZUNA_APP_KEY) return [];
-    const supportedCountries = ['gb', 'us', 'in', 'au', 'nz', 'ca', 'za', 'fr', 'de', 'it', 'nl', 'pl', 'ru', 'br', 'sg'];
-    const safeCountry = supportedCountries.includes(country) ? country : 'us';
-
-    // Fallback: If querying India jobs, prioritize local
-    const targetCountry = country === 'in' ? 'in' : safeCountry;
-
-    let effectiveQuery = query;
-    const url = `https://api.adzuna.com/v1/api/jobs/${targetCountry}/search/1?app_id=${ADZUNA_APP_ID}&app_key=${ADZUNA_APP_KEY}&results_per_page=20&what=${encodeURIComponent(effectiveQuery)}&where=${encodeURIComponent(location)}`;
-
     try {
+        const countryCode = country === 'remote' ? 'us' : country;
+        const url = `https://api.adzuna.com/v1/api/jobs/${countryCode}/search/1?app_id=${ADZUNA_APP_ID}&app_key=${ADZUNA_APP_KEY}&results_per_page=15&what=${encodeURIComponent(query)}&where=${encodeURIComponent(location)}`;
         const res = await fetch(url, { headers: { 'Accept': 'application/json' }, next: { revalidate: 3600 } });
         if (!res.ok) return [];
         const data = await res.json();
-        return (data.results || []).map((job: any) => ({
-            id: String(job.id),
-            title: job.title,
-            company: job.company?.display_name || "Unknown Company",
-            location: job.location?.display_name || "Unknown Location",
-            description: job.description,
-            salary_min: job.salary_min,
-            salary_max: job.salary_max,
-            url: job.redirect_url,
-            source: 'adzuna',
-            posted_at: job.created
+        return (data.results || []).map((j: any) => ({
+            id: String(j.id), title: j.title, company: j.company?.display_name || "Unknown",
+            location: j.location?.display_name || "Unknown", description: j.description,
+            salary_min: j.salary_min, salary_max: j.salary_max, url: j.redirect_url,
+            source: 'adzuna', posted_at: j.created
         }));
-    } catch (e) {
-        return [];
-    }
+    } catch { return []; }
 }
 
 async function fetchFromJooble(query: string, location: string, country: string, workMode?: string): Promise<JobListing[]> {
     if (!JOOBLE_API_KEY) return [];
-
-    // Explicitly mention India/Bengaluru/etc if country is 'in'
-    const locationParam = location || (country === 'in' ? 'India' : country);
-
-    const body = { keywords: query, location: locationParam };
     try {
-        const res = await fetch(`https://jooble.org/api/${JOOBLE_API_KEY}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body),
-            next: { revalidate: 3600 }
-        });
+        const url = `https://jooble.org/api/${JOOBLE_API_KEY}`;
+        const body = { keywords: query, location: location || (country === 'in' ? 'India' : country) };
+        const res = await fetch(url, { method: 'POST', body: JSON.stringify(body), headers: { 'Content-Type': 'application/json' }, next: { revalidate: 3600 } });
         if (!res.ok) return [];
         const data = await res.json();
-        return (data.jobs || []).map((job: any) => ({
-            id: String(job.id),
-            title: job.title,
-            company: job.company || "Unknown Company",
-            location: job.location,
-            description: job.snippet,
-            salary_min: undefined,
-            salary_max: undefined,
-            url: job.link,
-            source: 'jooble',
-            posted_at: job.updated
+        return (data.jobs || []).map((j: any) => ({
+            id: String(j.id), title: j.title, company: j.company || "Unknown",
+            location: j.location, description: j.snippet, url: j.link,
+            source: 'jooble', posted_at: j.updated
         }));
-    } catch (e) {
-        return [];
-    }
+    } catch { return []; }
 }
 
 async function fetchFromRemotive(query: string, location: string, country: string, workMode?: string): Promise<JobListing[]> {
     if (workMode && workMode !== 'remote') return [];
-    const url = `https://remotive.com/api/remote-jobs?search=${encodeURIComponent(query)}`;
     try {
-        const res = await fetch(url, { next: { revalidate: 3600 } });
+        const res = await fetch(`https://remotive.com/api/remote-jobs?search=${encodeURIComponent(query)}`, { next: { revalidate: 3600 } });
         if (!res.ok) return [];
         const data = await res.json();
-        return (data.jobs || []).slice(0, 15).map((job: any) => ({
-            id: String(job.id),
-            title: job.title,
-            company: job.company_name || "Unknown Company",
-            location: job.candidate_required_location || 'Remote',
-            description: job.description,
-            salary_min: undefined,
-            url: job.url,
-            source: 'remotive',
-            posted_at: job.publication_date,
-            logo_url: job.company_logo
+        return (data.jobs || []).slice(0, 10).map((j: any) => ({
+            id: String(j.id), title: j.title, company: j.company_name || "Unknown",
+            location: j.candidate_required_location || 'Remote', description: j.description,
+            url: j.url, source: 'remotive', posted_at: j.publication_date, logo_url: j.company_logo
         }));
-    } catch (e) {
-        return [];
-    }
+    } catch { return []; }
 }

@@ -40,8 +40,8 @@ export default async function DashboardPage() {
         internQuery = `${jobQuery} Intern`;
     }
 
-    const latestJobsPromise = searchJobs(jobQuery, "", "in");
-    const internshipsPromise = searchJobs(internQuery, "", "in");
+    const latestJobsPromise = searchJobs(jobQuery, "", "in", undefined, 7, 'job');
+    const internshipsPromise = searchJobs(internQuery, "", "in", undefined, 7, 'internship');
 
     const [latestJobs, internships] = await Promise.all([latestJobsPromise, internshipsPromise]);
 

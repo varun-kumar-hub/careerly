@@ -77,8 +77,8 @@ export default async function JobsPage({
     const days = parseInt(searchParams.days || "1", 10); // Default to 1 day
 
     const [jobs, internships] = await Promise.all([
-        searchJobs(jobQuery, location, country, mode, days),
-        searchJobs(internQuery, location, country, mode, days)
+        searchJobs(jobQuery, location, country, mode, days, 'job'),
+        searchJobs(internQuery, location, country, mode, days, 'internship')
     ]);
 
     return (
