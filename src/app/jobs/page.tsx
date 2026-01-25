@@ -67,14 +67,14 @@ export default async function JobsPage({
     // If still empty (no profile, no search), defaults below will handle it:
     // We will fetch "Software Engineer" for jobs and "Software Intern" for internships as broad defaults.
 
-    const jobQuery = effectiveQuery ? `${effectiveQuery} Developer` : "Software Engineer";
-    const internQuery = effectiveQuery ? `${effectiveQuery} Intern` : "Software Intern";
+    const days = parseInt(searchParams.days || "7", 10);
 
-    // 3. Parallel Fetch (Jobs & Internships)
+    const jobQuery = effectiveQuery || "Software Engineer";
+    const internQuery = effectiveQuery || "Software Intern";
+
     const location = searchParams.l || "";
     const mode = searchParams.mode || "";
     const country = searchParams.country || "in";
-    const days = parseInt(searchParams.days || "1", 10); // Default to 1 day
 
     const [jobs, internships] = await Promise.all([
         searchJobs(jobQuery, location, country, mode, days, 'job'),

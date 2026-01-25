@@ -20,14 +20,11 @@ const ADZUNA_APP_ID = process.env.ADZUNA_APP_ID;
 const ADZUNA_APP_KEY = process.env.ADZUNA_APP_KEY;
 const JOOBLE_API_KEY = process.env.JOOBLE_API_KEY;
 
-// Default freshness: 7 days for the main search, but user requests "now"
+// Default freshness: 7 days
 const DEFAULT_MAX_DAYS = 7;
 
 /**
  * Main Search Entry Point
- * 1. Tries the Database first (Aggregated Cache).
- * 2. If results are thin (< 5), it triggers a LIVE fetch from external APIs.
- * 3. Saves live results to DB and returns them.
  */
 export async function searchJobs(
     query: string,
@@ -39,16 +36,24 @@ export async function searchJobs(
 ): Promise<JobListing[]> {
     const supabase = await createClient();
 
-    // Build DB Query
+    // 1. FRESHNESS FILTER
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - maxDays);
+
+    // 2. DATABASE QUERY
     let dbQuery = supabase
         .from('jobs')
         .select('*')
+        .gte('posted_date', cutoffDate.toISOString())
         .order('posted_date', { ascending: false })
-        .limit(40);
+        .limit(60);
 
-    // Apply Filters
-    if (query && query !== 'all') {
-        dbQuery = dbQuery.or(`title.ilike.%${query}%,description.ilike.%${query}%`);
+    // SMART KEYWORD SEARCH: Split words and match all
+    if (query && query.toLowerCase() !== 'all') {
+        const keywords = query.split(/\s+/).filter(k => k.length > 1);
+        keywords.forEach(word => {
+            dbQuery = dbQuery.or(`title.ilike.%${word}%,description.ilike.%${word}%`);
+        });
     }
 
     if (location) {
@@ -61,20 +66,18 @@ export async function searchJobs(
 
     const { data: dbJobs, error } = await dbQuery;
 
-    // If we have plenty of fresh jobs in DB, return them
-    if (!error && dbJobs && dbJobs.length >= 8) {
+    // 3. FALLBACK: Trigger LIVE fetch if results are thin
+    if (!error && dbJobs && dbJobs.length >= 10) {
         return mapDbJobs(dbJobs);
     }
 
-    // FALLBACK: Not enough results in DB? Fetch from APIs LIVE
-    console.log(`[JobService] Thin results for "${query}" (${dbJobs?.length || 0}). Triggering LIVE fetch...`);
+    console.log(`[JobService] Thin database results for "${query}" (${dbJobs?.length || 0}). Fetching LIVE...`);
 
-    // Transform query for live search if it's too specific
-    const liveQuery = query || "Software Engineer";
-    const externalJobs = await fetchExternalJobs(liveQuery, location, country, workMode);
+    // Use a simplified query for external APIs if it's too complex
+    const apiQuery = query || "Software Engineer";
+    const externalJobs = await fetchExternalJobs(apiQuery, location, country, workMode);
 
     if (externalJobs.length > 0) {
-        // Map to DB Schema and Save (Sync)
         const dbRows = externalJobs.map(j => ({
             title: j.title,
             company: j.company,
@@ -89,22 +92,21 @@ export async function searchJobs(
             job_type: (type === 'internship' || j.title.toLowerCase().includes('intern')) ? 'internship' : 'job'
         }));
 
-        // Upsert silently
         await supabase.from('jobs').upsert(dbRows, {
             onConflict: 'source,source_id',
             ignoreDuplicates: true
         });
 
-        // Filter valid types for return
-        const filteredLive = externalJobs.filter(j => {
-            if (type === 'all') return true;
-            const isIntern = j.title.toLowerCase().includes('intern');
-            return type === 'internship' ? isIntern : !isIntern;
-        });
+        // Combine and Filter
+        const merged = [...mapDbJobs(dbJobs || []), ...externalJobs];
 
-        // Merge with existing DB jobs for maximum variety, then deduplicate
-        const merged = [...mapDbJobs(dbJobs || []), ...filteredLive];
-        const unique = Array.from(new Map(merged.map(item => [item.url, item])).values());
+        // Final filter for correct type and uniqueness
+        const unique = Array.from(new Map(merged.map(item => [item.url, item])).values())
+            .filter(j => {
+                if (type === 'all') return true;
+                const isIntern = j.title.toLowerCase().includes('intern') || j.job_type === 'internship';
+                return type === 'internship' ? isIntern : !isIntern;
+            });
 
         return unique.slice(0, 40);
     }
@@ -128,16 +130,10 @@ function mapDbJobs(data: any[]): JobListing[] {
     }));
 }
 
-/**
- * Cron/Ingest Handler
- */
 export async function ingestGlobalJobs() {
-    const queries = [
-        "Software Engineer", "Frontend Developer", "Backend Developer", "Full Stack Developer", "Data Scientist", "DevOps Engineer",
-        "Software Engineering Intern", "Data Science Intern", "Generic Intern",
-        "React", "Nodejs", "Python", "Java"
-    ];
-    const countries = ["in", "us", "gb", "remote"];
+    // Broad categories to ensure DB isn't empty
+    const queries = ["Software", "Developer", "Engineer", "Intern", "React", "Python", "Java"];
+    const countries = ["in", "us", "remote"];
     let count = 0;
     for (const q of queries) {
         for (const c of countries) {
@@ -148,7 +144,7 @@ export async function ingestGlobalJobs() {
     return count;
 }
 
-// --- INTERNAL LIVE FETCHERS ---
+// --- API FETCHERS ---
 
 async function fetchExternalJobs(query: string, location: string, country: string, workMode?: string): Promise<JobListing[]> {
     const promises = [
@@ -165,7 +161,7 @@ async function fetchExternalJobs(query: string, location: string, country: strin
 async function fetchFromAdzuna(query: string, location: string, country: string, workMode?: string): Promise<JobListing[]> {
     if (!ADZUNA_APP_ID || !ADZUNA_APP_KEY) return [];
     try {
-        const countryCode = country === 'remote' ? 'us' : country;
+        const countryCode = (country === 'remote' || country === 'in') ? country : 'us';
         const url = `https://api.adzuna.com/v1/api/jobs/${countryCode}/search/1?app_id=${ADZUNA_APP_ID}&app_key=${ADZUNA_APP_KEY}&results_per_page=15&what=${encodeURIComponent(query)}&where=${encodeURIComponent(location)}`;
         const res = await fetch(url, { headers: { 'Accept': 'application/json' }, next: { revalidate: 3600 } });
         if (!res.ok) return [];
@@ -182,9 +178,8 @@ async function fetchFromAdzuna(query: string, location: string, country: string,
 async function fetchFromJooble(query: string, location: string, country: string, workMode?: string): Promise<JobListing[]> {
     if (!JOOBLE_API_KEY) return [];
     try {
-        const url = `https://jooble.org/api/${JOOBLE_API_KEY}`;
-        const body = { keywords: query, location: location || (country === 'in' ? 'India' : country) };
-        const res = await fetch(url, { method: 'POST', body: JSON.stringify(body), headers: { 'Content-Type': 'application/json' }, next: { revalidate: 3600 } });
+        const body = { keywords: query, location: location || (country === 'in' ? 'India' : 'USA') };
+        const res = await fetch(`https://jooble.org/api/${JOOBLE_API_KEY}`, { method: 'POST', body: JSON.stringify(body), headers: { 'Content-Type': 'application/json' }, next: { revalidate: 3600 } });
         if (!res.ok) return [];
         const data = await res.json();
         return (data.jobs || []).map((j: any) => ({
