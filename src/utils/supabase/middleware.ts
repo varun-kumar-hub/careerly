@@ -36,9 +36,54 @@ export async function updateSession(request: NextRequest) {
 
     // IMPORTANT: DO NOT REMOVE auth.getUser()
 
+    // CLEANUP: Remove conflicting cookies from other Supabase projects on localhost
+    const allCookies = request.cookies.getAll();
+
+    // Dynamically extract project reference from the Supabase URL
+    // Format: https://<project-ref>.supabase.co
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+    let currentProject = '';
+
+    try {
+        const url = new URL(supabaseUrl);
+        // The hostname depends on the setup, but usually it's <project-ref>.supabase.co
+        // We'll try to extract the first part of the hostname
+        const hostnameParts = url.hostname.split('.');
+        if (hostnameParts.length > 0) {
+            currentProject = hostnameParts[0];
+        }
+    } catch (e) {
+        console.error('[Middleware] Failed to parse NEXT_PUBLIC_SUPABASE_URL:', e);
+    }
+
+    const conflictingCookies = currentProject ? allCookies.filter(c =>
+        (c.name.startsWith('sb-') && !c.name.includes(currentProject)) ||
+        c.name.startsWith('sb-wgt') ||
+        c.name.startsWith('sb-tdz') ||
+        c.name.startsWith('sb-slfc')
+    ) : [];
+
+    if (conflictingCookies.length > 0) {
+        // console.log(`[Middleware] Cleaning up ${conflictingCookies.length} conflicting cookies: ${conflictingCookies.map(c => c.name).join(', ')}`);
+        // We do this by setting them with max-age 0 in the response.
+        conflictingCookies.forEach(c => {
+            supabaseResponse.cookies.set(c.name, '', { maxAge: 0 });
+            request.cookies.delete(c.name); // Delete from request so Supabase doesn't see them (optional)
+        });
+    }
+
     const {
         data: { user },
+        error,
     } = await supabase.auth.getUser()
+
+    if (error) {
+        console.log('[Middleware] getUser error:', error.message);
+    }
+
+    // Debug cookies
+    console.log(`[Middleware] Cookies present: ${allCookies.map(c => c.name).join(', ')}`);
+    console.log(`[Middleware] User found: ${!!user}`);
 
     const path = request.nextUrl.pathname
 
@@ -69,6 +114,7 @@ export async function updateSession(request: NextRequest) {
     // 2. Protected Applicant Routes (Dashboard, Resume, etc)
     if (path.startsWith('/dashboard') || path.startsWith('/resume') || path.startsWith('/jobs')) {
         if (!user) {
+            console.log(`[Middleware] No user found for protected route ${path}, redirecting to login`);
             const url = request.nextUrl.clone()
             url.pathname = '/auth/login'
             return NextResponse.redirect(url)
@@ -86,6 +132,7 @@ export async function updateSession(request: NextRequest) {
     if (path.startsWith('/auth/login') || path.startsWith('/auth/signup') || path.startsWith('/onboarding')) {
         // If already logged in, redirect to appropriate dashboard
         if (user) {
+            console.log(`[Middleware] User logged in, redirecting from ${path} to dashboard`);
             const url = request.nextUrl.clone()
             if (isAdminEmail(user.email)) {
                 url.pathname = '/admin'

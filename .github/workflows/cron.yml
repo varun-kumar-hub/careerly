@@ -1,0 +1,26 @@
+name: Daily Job Ingestion
+
+on:
+  schedule:
+    # Runs at the start of every hour
+    - cron: '0 * * * *'
+  workflow_dispatch: # Allows you to run this manually from the Actions tab
+
+jobs:
+  cron:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wake up the API
+        run: |
+          # Replace 'YOUR_DEPLOYED_URL' with your actual production URL in GitHub Secrets
+          # We check if the secret exists, otherwise warn (or just fail if critical)
+          if [ -z "${{ secrets.APP_URL }}" ]; then
+            echo "URL not set, please configure APP_URL secret."
+            exit 1
+          fi
+          
+          echo "Triggering Cron Job at ${{ secrets.APP_URL }}/api/cron/ingest"
+          
+          curl -X GET "${{ secrets.APP_URL }}/api/cron/ingest" \
+               -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+               --fail

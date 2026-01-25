@@ -12,6 +12,13 @@ export interface UploadResult {
     error?: string;
 }
 
+/**
+ * Server Action to handle resume upload.
+ * 1. Uploads file to Supabase Storage.
+ * 2. Extracts text from the file.
+ * 3. Analyzes text for skills and sections.
+ * 4. Saves results to `resume_analysis` table.
+ */
 export async function uploadResumeAction(formData: FormData): Promise<UploadResult> {
     const file = formData.get("resume") as File;
 
@@ -31,7 +38,6 @@ export async function uploadResumeAction(formData: FormData): Promise<UploadResu
     const fileName = `${user.id}/${Date.now()}.${fileExt}`;
 
     // Convert File to Buffer for extraction
-    // Note: 'file.arrayBuffer()' is available in Node 18+ / Next.js
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 

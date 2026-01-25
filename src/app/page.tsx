@@ -1,8 +1,12 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { Briefcase, FileText, LayoutDashboard } from "lucide-react";
+import { createClient } from "@/utils/supabase/server";
 
-export default function Home() {
+export default async function Home() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
   return (
     <div className="flex min-h-screen flex-col bg-background">
       {/* Navbar */}
@@ -12,12 +16,20 @@ export default function Home() {
           <span>Careerly</span>
         </div>
         <div className="ml-auto flex gap-4">
-          <Button variant="ghost" asChild>
-            <Link href="/auth/login">Log in</Link>
-          </Button>
-          <Button asChild>
-            <Link href="/auth/signup">Sign up</Link>
-          </Button>
+          {user ? (
+            <Button asChild>
+              <Link href="/dashboard">Go to Dashboard</Link>
+            </Button>
+          ) : (
+            <>
+              <Button variant="ghost" asChild>
+                <Link href="/auth/login">Log in</Link>
+              </Button>
+              <Button asChild>
+                <Link href="/auth/signup">Sign up</Link>
+              </Button>
+            </>
+          )}
         </div>
       </header>
 

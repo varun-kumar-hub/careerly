@@ -14,6 +14,7 @@ export interface ProfileData {
     job_type?: string;
     work_mode?: string;
     preferred_locations?: string[];
+    github_username?: string;
     experience_level?: string;
     avatar_url?: string;
 }

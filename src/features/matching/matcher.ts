@@ -23,6 +23,30 @@ function extractSkillsFromText(text: string): string[] {
     return Array.from(found);
 }
 
+/**
+ * Calculates a match score between a job description and a user's combined skills (profile + resume).
+ * 
+ * Logic:
+ * 1. Extracts required skills from the Job Description.
+ * 2. Compares against the user's unique skill set.
+ * 3. Returns a percentage score and lists matched/missing skills.
+ * 
+ * @param jobDescription - The full text of the job description.
+ * @param profileSkills - Skills explicitly listed in the user's profile.
+ * @param resumeSkills - Skills extracted from the user's resume.
+ */
+/**
+ * Calculates a match score between a job description and a user's combined skills (profile + resume).
+ * 
+ * Logic:
+ * 1. Extracts required skills from the Job Description.
+ * 2. Compares against the user's unique skill set.
+ * 3. Returns a percentage score and lists matched/missing skills.
+ * 
+ * @param jobDescription - The full text of the job description.
+ * @param profileSkills - Skills explicitly listed in the user's profile.
+ * @param resumeSkills - Skills extracted from the user's resume.
+ */
 export function calculateMatchScore(
     jobDescription: string,
     profileSkills: string[] = [],

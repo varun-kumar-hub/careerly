@@ -12,6 +12,8 @@ interface AuthContextType {
     signOut: () => Promise<void>;
     signInWithGoogle: () => Promise<void>;
     signInWithGithub: () => Promise<void>;
+    signInWithPassword: (email: string, password: string) => Promise<{ error: Error | null }>;
+    signUp: (email: string, password: string) => Promise<{ error: Error | null }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -24,6 +26,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const supabase = createClient();
 
     useEffect(() => {
+        // Check active session immediately to avoid "spinning" if onAuthStateChange lags
+        const initSession = async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            setSession(session);
+            setUser(session?.user ?? null);
+            setLoading(false);
+        };
+        initSession();
+
         const {
             data: { subscription },
         } = supabase.auth.onAuthStateChange((event, session) => {
@@ -66,8 +77,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
     };
 
+    const signInWithPassword = async (email: string, password: string) => {
+        const { error } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+        });
+
+        if (!error) {
+            router.refresh();
+            router.push("/dashboard");
+        }
+        return { error };
+    };
+
+    const signUp = async (email: string, password: string) => {
+        const { error } = await supabase.auth.signUp({
+            email,
+            password,
+            options: {
+                emailRedirectTo: `${location.origin}/auth/callback`,
+            },
+        });
+        return { error };
+    };
+
     return (
-        <AuthContext.Provider value={{ user, session, loading, signOut, signInWithGoogle, signInWithGithub }}>
+        <AuthContext.Provider value={{ user, session, loading, signOut, signInWithGoogle, signInWithGithub, signInWithPassword, signUp }}>
             {children}
         </AuthContext.Provider>
     );

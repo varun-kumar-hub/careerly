@@ -2,51 +2,61 @@
 
 :root {
   /* Indigo / Blue Gradient - Primary */
-  --primary: #4F46E5; /* indigo-600 */
+  --primary: #4F46E5;
+  /* indigo-600 */
   --primary-foreground: #ffffff;
-  --primary-hover: #4338ca; /* indigo-700 */
+  --primary-hover: #4338ca;
+  /* indigo-700 */
 
   /* Slate / Gray - Secondary & Backgrounds */
-  --background: #F8FAFC; /* slate-50 */
-  --foreground: #0F172A; /* slate-900 */
+  --background: #ffffff;
+  /* slate-50 */
+  --foreground: #0F172A;
+  /* slate-900 */
   --card: #ffffff;
   --card-foreground: #0F172A;
-  --muted: #F1F5F9; /* slate-100 */
-  --muted-foreground: #64748B; /* slate-500 */
-  --border: #E2E8F0; /* slate-200 */
+  --muted: #F1F5F9;
+  /* slate-100 */
+  --muted-foreground: #64748B;
+  /* slate-500 */
+  --border: #E2E8F0;
+  /* slate-200 */
 
   /* Emerald / Green - Accent & Success */
-  --accent: #10B981; /* emerald-500 */
+  --accent: #10B981;
+  /* emerald-500 */
   --success: #10B981;
   --success-foreground: #ffffff;
 
   /* Amber - Warning */
-  --warning: #F59E0B; /* amber-500 */
+  --warning: #F59E0B;
+  /* amber-500 */
   --warning-foreground: #ffffff;
 
   /* Red - Error */
-  --destructive: #EF4444; /* red-500 */
+  --destructive: #EF4444;
+  /* red-500 */
   --destructive-foreground: #ffffff;
-  
+
   --radius: 0.5rem;
 }
 
-/* Dark Mode Overrides */
-@media (prefers-color-scheme: dark) {
+/* Dark Mode Overrides - DISABLED for Professional White Theme */
+/* @media (prefers-color-scheme: dark) {
   :root {
-    --background: #020617; /* slate-950 */
-    --foreground: #F8FAFC; /* slate-50 */
-    --card: #1E293B; /* slate-800 */
-    --card-foreground: #F8FAFC;
-    --muted: #0F172A; /* slate-900 */
-    --muted-foreground: #94A3B8; /* slate-400 */
-    --border: #1E293B; /* slate-800 */
+    --background: #ffffff;
+    --foreground: #0F172A;
+    --card: #ffffff;
+    --card-foreground: #0F172A;
+    --muted: #F8FAFC;
+    --muted-foreground: #64748B;
+    --border: #E2E8F0;
     
-    --primary: #6366F1; /* indigo-500 */
+    --primary: #4F46E5;
     --primary-foreground: #ffffff;
-    --primary-hover: #4F46E5; /* indigo-600 */
+    --primary-hover: #4338ca;
   }
-}
+} */
 
 body {
   background-color: var(--background);
@@ -71,7 +81,7 @@ body {
   --color-destructive-foreground: var(--destructive-foreground);
   --color-warning: var(--warning);
   --color-success: var(--success);
-  
+
   --radius-lg: var(--radius);
   --radius-md: calc(var(--radius) - 2px);
   --radius-sm: calc(var(--radius) - 4px);
