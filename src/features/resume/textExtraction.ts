@@ -20,19 +20,12 @@ if (!global.DOMMatrix) {
     } as any;
 }
 
+// @ts-ignore
 const pdfParse = require("pdf-parse");
 import mammoth from "mammoth";
 
 // ...
 
-/**
- * Extracts raw text content from a file buffer.
- * Supports PDF and DOCX formats.
- * 
- * @param fileBuffer - The binary buffer of the file.
- * @param fileType - The MIME type of the file.
- * @returns The extracted text as a string.
- */
 export async function extractText(fileBuffer: Buffer, fileType: string): Promise<string> {
     if (fileType === "application/pdf" || fileType.endsWith("pdf")) {
         return extractTextFromPDF(fileBuffer);
@@ -48,11 +41,18 @@ export async function extractText(fileBuffer: Buffer, fileType: string): Promise
 
 async function extractTextFromPDF(buffer: Buffer): Promise<string> {
     try {
-        // Handle potential default export in different envs
-        const parser = pdfParse.default || pdfParse;
+        let parser = pdfParse;
+        // Handle ES/CommonJS interop
+        if (typeof parser !== 'function' && parser.default) {
+            parser = parser.default;
+        }
 
         if (typeof parser !== 'function') {
-            throw new Error(`pdf-parse export is not a function: ${typeof parser}`);
+            // Fallback: If pdf-parse is purely an object but looks like the lib?
+            // Sometimes it exports a named function? No, usually default.
+            // Let's log keys if we fail
+            const keys = typeof parser === 'object' ? Object.keys(parser).join(', ') : typeof parser;
+            throw new Error(`pdf-parse export is not a function. Type: ${typeof parser}, Keys: ${keys}`);
         }
 
         const data = await parser(buffer);
