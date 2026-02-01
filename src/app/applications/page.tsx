@@ -29,8 +29,8 @@ export default async function ApplicationsPage() {
             <BackButton fallbackUrl="/dashboard" />
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-white">My Applications</h1>
-                    <p className="text-gray-400">Track and manage your job applications.</p>
+                    <h1 className="text-3xl font-bold tracking-tight text-gray-900">My Applications</h1>
+                    <p className="text-gray-500">Track and manage your job applications.</p>
                 </div>
                 <Link href="/jobs">
                     <Button>Find More Jobs</Button>
@@ -45,9 +45,9 @@ export default async function ApplicationsPage() {
                 )}
 
                 {applications?.map((app) => (
-                    <Card key={app.id} className="p-6 bg-gray-900 border-gray-800 flex flex-col md:flex-row gap-4 justify-between items-start md:items-center">
+                    <Card key={app.id} className="p-6 bg-white border-gray-200 shadow-sm flex flex-col md:flex-row gap-4 justify-between items-start md:items-center hover:shadow-md transition-shadow">
                         <div className="space-y-2 flex-1">
-                            <h3 className="text-xl font-semibold text-blue-400">
+                            <h3 className="text-xl font-semibold text-blue-600">
                                 {app.job_url ? (
                                     <a href={app.job_url} target="_blank" rel="noopener noreferrer" className="hover:underline flex items-center gap-2">
                                         {app.job_title}
@@ -57,7 +57,7 @@ export default async function ApplicationsPage() {
                                     app.job_title
                                 )}
                             </h3>
-                            <div className="flex items-center gap-2 text-gray-300 font-medium">
+                            <div className="flex items-center gap-2 text-gray-600 font-medium">
                                 <span>{app.company_name}</span>
                                 {app.location && (
                                     <>
@@ -88,7 +88,7 @@ export default async function ApplicationsPage() {
                                 "use server";
                                 await deleteApplicationAction(app.id);
                             }}>
-                                <Button variant="ghost" size="icon" className="text-red-400 hover:text-red-300 hover:bg-red-900/20">
+                                <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-600 hover:bg-red-50">
                                     <Trash2 className="h-5 w-5" />
                                 </Button>
                             </form>

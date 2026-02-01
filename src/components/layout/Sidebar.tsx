@@ -27,12 +27,30 @@ const navItems = [
     { name: "Profile", href: "/profile", icon: User },
 ];
 
+import { useState } from "react";
+import { cleanupOldJobsAction } from "@/features/admin/actions";
+
 export function Sidebar() {
     const pathname = usePathname();
     const { signOut, user } = useAuth();
+    const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+    const [isCleaning, setIsCleaning] = useState(false);
 
     // Check if current user is admin
     const isAdmin = user?.email ? isAdminEmail(user.email) : false;
+
+    const handleLogout = async () => {
+        setIsCleaning(true);
+        try {
+            // Requirement: Remove jobs posted before 1 month on logout
+            await cleanupOldJobsAction();
+        } catch (error) {
+            console.error("Cleanup failed:", error);
+        } finally {
+            setIsCleaning(false);
+            await signOut();
+        }
+    };
 
     return (
         <div className="group sticky top-0 flex h-screen w-20 flex-col border-r border-gray-200 bg-white text-gray-900 transition-all duration-300 hover:w-64 z-50 shadow-sm">
@@ -109,13 +127,41 @@ export function Sidebar() {
                 <Button
                     variant="ghost"
                     className="w-full justify-start gap-3 px-2 text-gray-600 hover:text-red-600 hover:bg-red-50"
-                    onClick={() => signOut()}
+                    onClick={() => setShowLogoutConfirm(true)}
                     title="Log out"
                 >
                     <LogOut className="h-5 w-5 shrink-0" />
                     <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">Log out</span>
                 </Button>
             </div>
+
+            {/* Logout Confirmation Modal */}
+            {showLogoutConfirm && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+                    <div className="w-full max-w-sm rounded-lg bg-white p-6 shadow-xl animate-in fade-in zoom-in-95 duration-200">
+                        <h3 className="text-lg font-semibold text-gray-900">Sign out?</h3>
+                        <p className="mt-2 text-sm text-gray-500">
+                            Are you sure you want to sign out? This will also clean up old job listings (older than 30 days) from the cache.
+                        </p>
+                        <div className="mt-6 flex justify-end gap-3">
+                            <Button
+                                variant="outline"
+                                onClick={() => setShowLogoutConfirm(false)}
+                                disabled={isCleaning}
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                variant="destructive"
+                                onClick={handleLogout}
+                                disabled={isCleaning}
+                            >
+                                {isCleaning ? "Cleaning..." : "Yes, Sign Out"}
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

@@ -105,20 +105,24 @@ export default async function ResumePage() {
                         )}
 
                         {/* Resume History */}
-                        {analyses && analyses.length > 1 && (
+                        {analyses && analyses.length > 0 && (
                             <div className="rounded-xl border border-gray-200 bg-white text-gray-900 shadow-sm p-6 mt-8">
-                                <h3 className="text-lg font-semibold mb-4 text-gray-900">Previous Resumes</h3>
+                                <h3 className="text-lg font-semibold mb-4 text-gray-900">Upload History</h3>
                                 <div className="space-y-3">
-                                    {analyses.slice(1).map((item) => (
+                                    {analyses.map((item, index) => (
                                         <div key={item.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-100">
                                             <div className="flex items-center gap-3">
                                                 <FileText className="h-5 w-5 text-gray-400" />
                                                 <div>
-                                                    <p className="font-medium text-gray-900 text-sm">{item.file_name || "Unknown Filename"}</p>
+                                                    <div className="flex items-center gap-2">
+                                                        <p className="font-medium text-gray-900 text-sm">{item.file_name || "Unknown Filename"}</p>
+                                                        {index === 0 && (
+                                                            <span className="bg-green-100 text-green-700 text-[10px] px-1.5 py-0.5 rounded-full font-medium">Current</span>
+                                                        )}
+                                                    </div>
                                                     <p className="text-xs text-gray-500">{new Date(item.created_at).toLocaleDateString()} • {new Date(item.created_at).toLocaleTimeString()}</p>
                                                 </div>
                                             </div>
-                                            {/* Could add a 'View' button here later if we have a view page */}
                                         </div>
                                     ))}
                                 </div>

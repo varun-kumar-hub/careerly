@@ -27,87 +27,10 @@ const ADZUNA_APP_ID = process.env.ADZUNA_APP_ID;
 const ADZUNA_APP_KEY = process.env.ADZUNA_APP_KEY;
 const JOOBLE_API_KEY = process.env.JOOBLE_API_KEY;
 
-// Default freshness: 14 days (2 weeks)
-const DEFAULT_MAX_DAYS = 14;
+// Default freshness: 30 days (1 month)
+const DEFAULT_MAX_DAYS = 30;
 
-/**
- * Get ALL jobs without skill-based filtering.
- * Used for "Explore All Jobs" section.
- * Sorted by posted_date DESC (newest first).
- */
-export async function getAllJobsUnfiltered(options: JobFilterOptions = {}): Promise<JobListing[]> {
-    const { type = 'all', location = '', query = '', limit = 50 } = options;
-    const supabase = await createClient();
-
-    // Freshness: 7 days
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - DEFAULT_MAX_DAYS);
-
-    let dbQuery = supabase
-        .from('jobs')
-        .select('*')
-        .gte('posted_date', cutoffDate.toISOString())
-        .order('posted_date', { ascending: false })
-        .limit(limit);
-
-    // Manual type filter (NOT skill-based)
-    if (type !== 'all') {
-        dbQuery = dbQuery.eq('job_type', type);
-    }
-
-    // Manual location filter
-    if (location) {
-        dbQuery = dbQuery.ilike('location', `%${location}%`);
-    }
-
-    // Manual keyword search
-    if (query) {
-        dbQuery = dbQuery.or(`title.ilike.%${query}%,description.ilike.%${query}%,company.ilike.%${query}%`);
-    }
-
-    const { data, error } = await dbQuery;
-
-    if (error) {
-        console.error('[getAllJobsUnfiltered] Error:', error);
-        return [];
-    }
-
-    return mapDbJobs(data || []);
-}
-
-/**
- * Get jobs for recommendation matching.
- * Returns raw jobs that will be scored client-side or in API route.
- */
-export async function getRecommendedJobs(options: JobFilterOptions = {}): Promise<JobListing[]> {
-    const { type = 'all', limit = 100 } = options;
-    const supabase = await createClient();
-
-    // Freshness: 7 days
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - DEFAULT_MAX_DAYS);
-
-    let dbQuery = supabase
-        .from('jobs')
-        .select('*')
-        .gte('posted_date', cutoffDate.toISOString())
-        .order('posted_date', { ascending: false })
-        .limit(limit);
-
-    // Type filter
-    if (type !== 'all') {
-        dbQuery = dbQuery.eq('job_type', type);
-    }
-
-    const { data, error } = await dbQuery;
-
-    if (error) {
-        console.error('[getRecommendedJobs] Error:', error);
-        return [];
-    }
-
-    return mapDbJobs(data || []);
-}
+// ... (existing code)
 
 /**
  * Main Search Entry Point
@@ -161,7 +84,8 @@ export async function searchJobs(
 
     // Use a simplified query for external APIs if it's too complex
     const apiQuery = query || "Software Engineer";
-    const externalJobs = await fetchExternalJobs(apiQuery, location, country, workMode);
+    // PASS maxDays to external fetcher
+    const externalJobs = await fetchExternalJobs(apiQuery, location, country, workMode, maxDays);
 
     if (externalJobs.length > 0) {
         const dbRows = externalJobs.map(j => ({
@@ -224,7 +148,8 @@ export async function ingestGlobalJobs() {
     let count = 0;
     for (const q of queries) {
         for (const c of countries) {
-            const jobs = await searchJobs(q, '', c, undefined, 7, q.toLowerCase().includes('intern') ? 'internship' : 'job');
+            // Pass default 30 days
+            const jobs = await searchJobs(q, '', c, undefined, 30, q.toLowerCase().includes('intern') ? 'internship' : 'job');
             count += jobs.length;
         }
     }
@@ -238,11 +163,12 @@ function checkIsInternship(title: string): boolean {
 
 // --- API FETCHERS ---
 
-async function fetchExternalJobs(query: string, location: string, country: string, workMode?: string): Promise<JobListing[]> {
+// Updated to accept maxDays
+async function fetchExternalJobs(query: string, location: string, country: string, workMode?: string, maxDays: number = 30): Promise<JobListing[]> {
     const promises = [
-        fetchFromAdzuna(query, location, country, workMode),
-        fetchFromJooble(query, location, country, workMode),
-        fetchFromRemotive(query, location, country, workMode)
+        fetchFromAdzuna(query, location, country, workMode, maxDays),
+        fetchFromJooble(query, location, country, workMode, maxDays),
+        fetchFromRemotive(query, location, country, workMode, maxDays)
     ];
     const res = await Promise.allSettled(promises);
     const jobs: JobListing[] = [];
@@ -250,11 +176,13 @@ async function fetchExternalJobs(query: string, location: string, country: strin
     return jobs;
 }
 
-async function fetchFromAdzuna(query: string, location: string, country: string, workMode?: string): Promise<JobListing[]> {
+// 1. ADZUNA: Supports max_days param
+async function fetchFromAdzuna(query: string, location: string, country: string, workMode?: string, maxDays: number = 30): Promise<JobListing[]> {
     if (!ADZUNA_APP_ID || !ADZUNA_APP_KEY) return [];
     try {
         const countryCode = (country === 'remote' || country === 'in') ? country : 'us';
-        const url = `https://api.adzuna.com/v1/api/jobs/${countryCode}/search/1?app_id=${ADZUNA_APP_ID}&app_key=${ADZUNA_APP_KEY}&results_per_page=15&what=${encodeURIComponent(query)}&where=${encodeURIComponent(location)}`;
+        // ADDED &max_days=${maxDays}
+        const url = `https://api.adzuna.com/v1/api/jobs/${countryCode}/search/1?app_id=${ADZUNA_APP_ID}&app_key=${ADZUNA_APP_KEY}&results_per_page=15&what=${encodeURIComponent(query)}&where=${encodeURIComponent(location)}&max_days=${maxDays}`;
         const res = await fetch(url, { headers: { 'Accept': 'application/json' }, next: { revalidate: 3600 } });
         if (!res.ok) return [];
         const data = await res.json();
@@ -268,34 +196,54 @@ async function fetchFromAdzuna(query: string, location: string, country: string,
     } catch { return []; }
 }
 
-async function fetchFromJooble(query: string, location: string, country: string, workMode?: string): Promise<JobListing[]> {
+// 2. JOOBLE: Needs manual filter
+async function fetchFromJooble(query: string, location: string, country: string, workMode?: string, maxDays: number = 30): Promise<JobListing[]> {
     if (!JOOBLE_API_KEY) return [];
     try {
         const body = { keywords: query, location: location || (country === 'in' ? 'India' : 'USA') };
         const res = await fetch(`https://jooble.org/api/${JOOBLE_API_KEY}`, { method: 'POST', body: JSON.stringify(body), headers: { 'Content-Type': 'application/json' }, next: { revalidate: 3600 } });
         if (!res.ok) return [];
         const data = await res.json();
+
+        const cutoff = new Date();
+        cutoff.setDate(cutoff.getDate() - maxDays);
+
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        return (data.jobs || []).map((j: any) => ({
-            id: String(j.id), title: j.title, company: j.company || "Unknown",
-            location: j.location, description: j.snippet, url: j.link,
-            source: 'jooble', posted_at: j.updated
-        }));
+        return (data.jobs || [])
+            .filter((j: any) => {
+                const posted = new Date(j.updated);
+                return posted >= cutoff;
+            })
+            .map((j: any) => ({
+                id: String(j.id), title: j.title, company: j.company || "Unknown",
+                location: j.location, description: j.snippet, url: j.link,
+                source: 'jooble', posted_at: j.updated
+            }));
     } catch { return []; }
 }
 
-async function fetchFromRemotive(query: string, location: string, country: string, workMode?: string): Promise<JobListing[]> {
+// 3. REMOTIVE: Needs manual filter
+async function fetchFromRemotive(query: string, location: string, country: string, workMode?: string, maxDays: number = 30): Promise<JobListing[]> {
     if (workMode && workMode !== 'remote') return [];
     try {
         const res = await fetch(`https://remotive.com/api/remote-jobs?search=${encodeURIComponent(query)}`, { next: { revalidate: 3600 } });
         if (!res.ok) return [];
         const data = await res.json();
+
+        const cutoff = new Date();
+        cutoff.setDate(cutoff.getDate() - maxDays);
+
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        return (data.jobs || []).slice(0, 10).map((j: any) => ({
-            id: String(j.id), title: j.title, company: j.company_name || "Unknown",
-            location: j.candidate_required_location || 'Remote', description: j.description,
-            url: j.url, source: 'remotive', posted_at: j.publication_date, logo_url: j.company_logo
-        }));
+        return (data.jobs || []).slice(0, 15)
+            .filter((j: any) => {
+                const posted = new Date(j.publication_date);
+                return posted >= cutoff;
+            })
+            .map((j: any) => ({
+                id: String(j.id), title: j.title, company: j.company_name || "Unknown",
+                location: j.candidate_required_location || 'Remote', description: j.description,
+                url: j.url, source: 'remotive', posted_at: j.publication_date, logo_url: j.company_logo
+            }));
     } catch { return []; }
 }
 
