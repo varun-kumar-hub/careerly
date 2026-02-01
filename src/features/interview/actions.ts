@@ -27,19 +27,26 @@ export async function generateInterviewQuestions(
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
+    if (!user) {
+        return {
+            questions: "",
+            success: false,
+            error: "You must be logged in to generate questions."
+        };
+    }
+
     let candidateBackground = "";
 
-    if (user) {
-        const { data: profile } = await supabase
-            .from("profiles")
-            .select("skills, experience_level")
-            .eq("id", user.id)
-            .single();
+    // Fetch profile context
+    const { data: profileContext } = await supabase
+        .from("profiles")
+        .select("skills, experience_level")
+        .eq("id", user.id)
+        .single();
 
-        if (profile) {
-            candidateBackground = `Skills: ${profile.skills?.join(", ") || "Not specified"}
-Experience Level: ${profile.experience_level || "Not specified"}`;
-        }
+    if (profileContext) {
+        candidateBackground = `Skills: ${profileContext.skills?.join(", ") || "Not specified"}
+Experience Level: ${profileContext.experience_level || "Not specified"}`;
     }
 
     try {
