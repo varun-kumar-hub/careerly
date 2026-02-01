@@ -15,7 +15,11 @@ export interface ProfileData {
     work_mode?: string;
     preferred_locations?: string[];
     github_username?: string;
-    experience_level?: string;
+    experience_level?: string | null;
+    previous_company?: string | null;
+    previous_role?: string | null;
+    change_reason?: string | null;
+    gemini_api_key?: string | null;
     avatar_url?: string;
 }
 

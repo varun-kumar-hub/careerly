@@ -54,16 +54,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }, [supabase, router]);
 
     const signOut = async () => {
+        // Use server-side logout to properly clear all cookies
+        // This prevents cookie accumulation that causes HTTP 431 errors
         await supabase.auth.signOut();
-        router.refresh();
-        router.push("/auth/login");
+
+        // Navigate to server-side logout route for complete cookie cleanup
+        window.location.href = "/auth/logout";
     };
 
     const signInWithGoogle = async () => {
         await supabase.auth.signInWithOAuth({
             provider: "google",
             options: {
-                redirectTo: `${location.origin}/auth/callback`,
+                redirectTo: `${location.origin}/auth/callback?next=/dashboard`,
             },
         });
     };
@@ -72,7 +75,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         await supabase.auth.signInWithOAuth({
             provider: "github",
             options: {
-                redirectTo: `${location.origin}/auth/callback`,
+                redirectTo: `${location.origin}/auth/callback?next=/dashboard`,
             },
         });
     };
@@ -95,7 +98,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             email,
             password,
             options: {
-                emailRedirectTo: `${location.origin}/auth/callback`,
+                emailRedirectTo: `${location.origin}/auth/callback?next=/dashboard`,
             },
         });
         return { error };

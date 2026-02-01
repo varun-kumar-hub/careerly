@@ -9,7 +9,7 @@ import { cn } from "@/utils/cn";
 import { useState } from "react";
 import { JobListing } from "@/features/jobs/jobService";
 import { calculateMatchScore } from "@/features/matching/matcher";
-import { JobCard } from "@/components/jobs/JobCard";
+import { JobCard } from "@/features/jobs/components/JobCard";
 import { GitHubStatsCard } from "@/features/github/GitHubStatsCard";
 
 interface DashboardClientProps {
@@ -91,14 +91,57 @@ export function DashboardClient({ latestJobs, internships }: DashboardClientProp
                     <p className="text-xs text-gray-500">Active applications</p>
                 </div>
 
-                <div className="rounded-xl border border-gray-200 bg-white text-card-foreground shadow-sm p-6 hover:shadow-md transition-shadow">
-                    <h3 className="font-semibold leading-none tracking-tight mb-2 text-gray-900">AI Cover Letter</h3>
+                {/* AI Cover Letter */}
+                <div className="rounded-xl border border-purple-200 bg-gradient-to-br from-purple-50 to-white shadow-sm p-6 hover:shadow-md transition-shadow">
+                    <h3 className="font-semibold leading-none tracking-tight mb-2 text-gray-900 flex items-center gap-2">
+                        <Wand2 className="h-4 w-4 text-purple-500" />
+                        AI Cover Letter
+                    </h3>
                     <p className="text-sm text-gray-500 mb-4">Generate a tailored cover letter instantly.</p>
-                    <Button variant="secondary" size="sm" asChild className="w-full bg-gray-50 text-gray-900 hover:bg-gray-100 border border-gray-200">
-                        <Link href="/cover-letter">
-                            <Wand2 className="mr-2 h-4 w-4" />
-                            Create New
-                        </Link>
+                    <Button variant="secondary" size="sm" asChild className="w-full bg-purple-100 text-purple-700 hover:bg-purple-200 border border-purple-200">
+                        <Link href="/cover-letter">Create New</Link>
+                    </Button>
+                </div>
+
+                {/* AI Resume Tailor */}
+                <div className="rounded-xl border border-blue-200 bg-gradient-to-br from-blue-50 to-white shadow-sm p-6 hover:shadow-md transition-shadow">
+                    <h3 className="font-semibold leading-none tracking-tight mb-2 text-gray-900 flex items-center gap-2">
+                        <svg className="h-4 w-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        AI Resume Tailor
+                    </h3>
+                    <p className="text-sm text-gray-500 mb-4">Tailor your resume for specific job postings.</p>
+                    <Button variant="secondary" size="sm" asChild className="w-full bg-blue-100 text-blue-700 hover:bg-blue-200 border border-blue-200">
+                        <Link href="/resume-ai">Tailor Resume</Link>
+                    </Button>
+                </div>
+
+                {/* Interview Prep */}
+                <div className="rounded-xl border border-green-200 bg-gradient-to-br from-green-50 to-white shadow-sm p-6 hover:shadow-md transition-shadow">
+                    <h3 className="font-semibold leading-none tracking-tight mb-2 text-gray-900 flex items-center gap-2">
+                        <svg className="h-4 w-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                        </svg>
+                        Interview Prep
+                    </h3>
+                    <p className="text-sm text-gray-500 mb-4">Practice with AI-generated interview questions.</p>
+                    <Button variant="secondary" size="sm" asChild className="w-full bg-green-100 text-green-700 hover:bg-green-200 border border-green-200">
+                        <Link href="/interview">Start Practice</Link>
+                    </Button>
+                </div>
+
+                {/* Skill Gap Analysis */}
+                <div className="rounded-xl border border-orange-200 bg-gradient-to-br from-orange-50 to-white shadow-sm p-6 hover:shadow-md transition-shadow">
+                    <h3 className="font-semibold leading-none tracking-tight mb-2 text-gray-900 flex items-center gap-2">
+                        <svg className="h-4 w-4 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                        </svg>
+                        Skill Gap Analysis
+                    </h3>
+                    <p className="text-sm text-gray-500 mb-4">Compare your skills to job requirements.</p>
+                    <Button variant="secondary" size="sm" asChild className="w-full bg-orange-100 text-orange-700 hover:bg-orange-200 border border-orange-200">
+                        <Link href="/skill-gap">Analyze Skills</Link>
                     </Button>
                 </div>
 

@@ -4,11 +4,12 @@ import { useState } from "react";
 import { JobListing } from "@/features/jobs/jobService";
 import { RecommendedJobs } from "@/features/jobs/components/RecommendedJobs";
 import { ExploreAllJobs } from "@/features/jobs/components/ExploreAllJobs";
+import { JobsSearch } from "@/features/jobs/components/JobsSearch";
 
-interface JobsClientProps {
+interface DualJobDisplayProps {
     jobs: JobListing[];
     internships: JobListing[];
-    userSkills: Set<string>;
+    userSkills: string[];
     query: string;
     isManualSearch: boolean;
     hasProfile: boolean;
@@ -21,10 +22,14 @@ interface JobsClientProps {
  * 1. Recommended for You - filtered by skill match
  * 2. Explore All Jobs - unfiltered, all jobs
  */
-export function JobsClient({ jobs, internships, userSkills, query, isManualSearch, hasProfile }: JobsClientProps) {
-    // Convert Set to Array for components
-    const userSkillsArray = Array.from(userSkills);
-
+export function DualJobDisplay({
+    jobs,
+    internships,
+    userSkills,
+    query,
+    isManualSearch,
+    hasProfile
+}: DualJobDisplayProps) {
     // Combine all jobs for recommendation matching
     const allJobs = [...jobs, ...internships];
 
@@ -32,7 +37,7 @@ export function JobsClient({ jobs, internships, userSkills, query, isManualSearc
         <div className="space-y-8">
             {/* Section 1: Recommended for You (Filtered) */}
             <RecommendedJobs
-                userSkills={userSkillsArray}
+                userSkills={userSkills}
                 jobs={allJobs}
             />
 
@@ -44,4 +49,3 @@ export function JobsClient({ jobs, internships, userSkills, query, isManualSearc
         </div>
     );
 }
-

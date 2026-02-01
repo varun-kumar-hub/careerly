@@ -7,7 +7,7 @@
 export function normalizeLocation(input: string): string {
     if (!input) return "";
 
-    let normalized = input.trim().toLowerCase();
+    const normalized = input.trim().toLowerCase();
 
     // Alias Map
     const aliases: Record<string, string> = {

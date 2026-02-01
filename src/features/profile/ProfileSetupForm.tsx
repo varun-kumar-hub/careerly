@@ -1,8 +1,9 @@
 "use client";
 
+import { MultiSelect } from "@/components/ui/MultiSelect";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { profileSchema, ProfileFormValues, academicYears, jobRoles, domains, experienceLevels, jobTypes, workModes } from "./profileValidator";
+import { profileSchema, ProfileFormValues, academicYears, jobRoles, domains, jobTypes } from "./profileValidator";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
@@ -11,7 +12,6 @@ import { useProfile } from "@/hooks/useProfile";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { cn } from "@/utils/cn";
-import { Github } from "lucide-react";
 
 export function ProfileSetupForm() {
     const { updateProfile, profile } = useProfile();
@@ -30,7 +30,11 @@ export function ProfileSetupForm() {
             interests: "",
             jobType: undefined,
             workMode: undefined,
-            experienceLevel: undefined,
+            isFresher: true,
+            yearsOfExperience: undefined,
+            previousCompany: "",
+            previousRole: "",
+            changeReason: "",
             github_username: "",
         }
     });
@@ -50,7 +54,13 @@ export function ProfileSetupForm() {
                 jobType: (profile.job_type as any) || "",
                 workMode: (profile.work_mode as any) || "",
                 preferredLocations: (profile.preferred_locations || []).join(", "),
-                experienceLevel: (profile.experience_level as any) || "",
+                isFresher: profile.experience_level === "Fresher" || !profile.experience_level,
+                yearsOfExperience: profile.experience_level && profile.experience_level !== "Fresher"
+                    ? parseInt(profile.experience_level) || undefined
+                    : undefined,
+                previousCompany: profile.previous_company || "",
+                previousRole: profile.previous_role || "",
+                changeReason: profile.change_reason || "",
                 github_username: profile.github_username || "",
             });
         }
@@ -71,6 +81,7 @@ export function ProfileSetupForm() {
 
     const currentRoles = watch("targetRoles") || [];
     const currentDomains = watch("targetDomains") || [];
+    const isFresherValue = watch("isFresher");
 
     const onSubmit = async (data: ProfileFormValues) => {
         setSubmitting(true);
@@ -83,9 +94,13 @@ export function ProfileSetupForm() {
                 job_roles: data.targetRoles,
                 domains: data.targetDomains,
                 job_type: data.jobType,
-                work_mode: data.workMode,
+                work_mode: data.workMode || "remote",
                 preferred_locations: data.preferredLocations ? data.preferredLocations.split(',').map(s => s.trim()).filter(Boolean) : [],
-                experience_level: data.experienceLevel,
+                experience_level: data.isFresher ? "Fresher" : `${data.yearsOfExperience || 0} years`,
+                previous_company: data.isFresher ? null : (data.previousCompany || null),
+                previous_role: data.isFresher ? null : (data.previousRole || null),
+                change_reason: data.isFresher ? null : (data.changeReason || null),
+                // gemini_api_key removed from this payload to prevent overwriting with null/empty if field is missing
                 github_username: data.github_username
             };
 
@@ -128,21 +143,6 @@ export function ProfileSetupForm() {
                         {errors.academicYear && <p className="text-red-500 text-sm">{errors.academicYear.message}</p>}
                     </div>
                 </div>
-
-                <div className="grid gap-2">
-                    <Label htmlFor="github" className="text-gray-700">GitHub Username (Optional)</Label>
-                    <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
-                            <Github className="h-4 w-4" />
-                        </span>
-                        <Input
-                            id="github"
-                            {...register("github_username")}
-                            placeholder="username"
-                            className="bg-gray-50 border-gray-300 pl-10"
-                        />
-                    </div>
-                </div>
             </div>
 
             <div className="space-y-4">
@@ -167,45 +167,23 @@ export function ProfileSetupForm() {
 
                 <div className="grid gap-2">
                     <Label className="text-gray-700">Target Roles</Label>
-                    <div className="flex flex-wrap gap-2">
-                        {jobRoles.map(role => (
-                            <button
-                                type="button"
-                                key={role}
-                                onClick={() => handleMultiSelectChange("targetRoles", role, currentRoles)}
-                                className={cn(
-                                    "px-3 py-1 rounded-full text-sm border transition-colors duration-200",
-                                    currentRoles.includes(role)
-                                        ? "bg-blue-600 text-white border-blue-600 shadow-sm"
-                                        : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50 hover:border-gray-300"
-                                )}
-                            >
-                                {role}
-                            </button>
-                        ))}
-                    </div>
+                    <MultiSelect
+                        options={[...jobRoles]}
+                        selected={currentRoles}
+                        onChange={(selected) => setValue("targetRoles", selected as any)}
+                        placeholder="Select roles..."
+                    />
                     {errors.targetRoles && <p className="text-red-500 text-sm">{errors.targetRoles.message}</p>}
                 </div>
 
                 <div className="grid gap-2">
                     <Label className="text-gray-700">Domains</Label>
-                    <div className="flex flex-wrap gap-2">
-                        {domains.map(d => (
-                            <button
-                                type="button"
-                                key={d}
-                                onClick={() => handleMultiSelectChange("targetDomains", d, currentDomains)}
-                                className={cn(
-                                    "px-3 py-1 rounded-full text-sm border transition-colors duration-200",
-                                    currentDomains.includes(d)
-                                        ? "bg-purple-600 text-white border-purple-600 shadow-sm"
-                                        : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50 hover:border-gray-300"
-                                )}
-                            >
-                                {d}
-                            </button>
-                        ))}
-                    </div>
+                    <MultiSelect
+                        options={[...domains]}
+                        selected={currentDomains}
+                        onChange={(selected) => setValue("targetDomains", selected as any)}
+                        placeholder="Select domains..."
+                    />
                     {errors.targetDomains && <p className="text-red-500 text-sm">{errors.targetDomains.message}</p>}
                 </div>
             </div>
@@ -215,44 +193,111 @@ export function ProfileSetupForm() {
                     <h2 className="text-xl font-bold text-gray-900 border-b border-gray-100 pb-2 mb-4 mt-8">Preferences</h2>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-4">
                     <div className="grid gap-2">
                         <Label htmlFor="jobType" className="text-gray-700">Job Type</Label>
                         <Select id="jobType" {...register("jobType")} className="bg-gray-50 border-gray-300">
                             <option value="">Select...</option>
-                            {jobTypes.map(t => <option key={t} value={t}>{t}</option>)}
+                            {jobTypes.map(t => <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>)}
                         </Select>
                         {errors.jobType && <p className="text-red-500 text-sm">{errors.jobType.message}</p>}
                     </div>
+                </div>
 
-                    <div className="grid gap-2">
-                        <Label htmlFor="workMode" className="text-gray-700">Work Mode</Label>
-                        <Select id="workMode" {...register("workMode")} className="bg-gray-50 border-gray-300">
-                            <option value="">Select...</option>
-                            {workModes.map(m => <option key={m} value={m}>{m}</option>)}
-                        </Select>
-                        {errors.workMode && <p className="text-red-500 text-sm">{errors.workMode.message}</p>}
+                <div className="grid gap-4">
+                    <Label className="text-gray-700">Experience</Label>
+                    <div className="flex items-center gap-4">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                                type="checkbox"
+                                {...register("isFresher")}
+                                className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                            />
+                            <span className="text-gray-700 font-medium">I am a Fresher</span>
+                        </label>
                     </div>
-                </div>
 
-                <div className="grid gap-2">
-                    <Label htmlFor="experienceLevel" className="text-gray-700">Experience Level</Label>
-                    <Select id="experienceLevel" {...register("experienceLevel")} className="bg-gray-50 border-gray-300">
-                        <option value="">Select...</option>
-                        {experienceLevels.map(e => <option key={e} value={e}>{e}</option>)}
-                    </Select>
-                    {errors.experienceLevel && <p className="text-red-500 text-sm">{errors.experienceLevel.message}</p>}
-                </div>
+                    {!isFresherValue && (
+                        <div className="space-y-4">
+                            <div className="grid gap-2">
+                                <Label htmlFor="yearsOfExperience" className="text-gray-700">Years of Experience</Label>
+                                <Input
+                                    id="yearsOfExperience"
+                                    type="number"
+                                    min="0"
+                                    max="50"
+                                    placeholder="Enter years of experience"
+                                    className="bg-gray-50 border-gray-300 max-w-xs"
+                                    {...register("yearsOfExperience", { valueAsNumber: true })}
+                                />
+                                {errors.yearsOfExperience && <p className="text-red-500 text-sm">{errors.yearsOfExperience.message}</p>}
+                            </div>
 
-                <div className="grid gap-2">
-                    <Label htmlFor="locations" className="text-gray-700">Preferred Locations</Label>
-                    <Input id="locations" {...register("preferredLocations")} placeholder="New York, London, Remote..." className="bg-gray-50 border-gray-300" />
+                            <div className="grid gap-4 md:grid-cols-2">
+                                <div className="grid gap-2">
+                                    <Label htmlFor="previousCompany" className="text-gray-700">Previous Company</Label>
+                                    <Input
+                                        id="previousCompany"
+                                        placeholder="Company Name"
+                                        className="bg-gray-50 border-gray-300"
+                                        {...register("previousCompany")}
+                                    />
+                                    {errors.previousCompany && <p className="text-red-500 text-sm">{errors.previousCompany.message}</p>}
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="previousRole" className="text-gray-700">Previous Role</Label>
+                                    <Input
+                                        id="previousRole"
+                                        placeholder="Job Title"
+                                        className="bg-gray-50 border-gray-300"
+                                        {...register("previousRole")}
+                                    />
+                                    {errors.previousRole && <p className="text-red-500 text-sm">{errors.previousRole.message}</p>}
+                                </div>
+                            </div>
+
+                            <div className="grid gap-2">
+                                <Label htmlFor="changeReason" className="text-gray-700">Reason for Changing Company</Label>
+                                <Input
+                                    id="changeReason"
+                                    placeholder="e.g. Seeking better growth opportunities..."
+                                    className="bg-gray-50 border-gray-300"
+                                    {...register("changeReason")}
+                                />
+                                {errors.changeReason && <p className="text-red-500 text-sm">{errors.changeReason.message}</p>}
+                            </div>
+                        </div>
+                    )}
+
                 </div>
             </div>
 
-            <Button type="submit" size="lg" className="w-full bg-blue-600 hover:bg-blue-700 text-white mt-8" disabled={submitting}>
-                {submitting ? "Saving Profile..." : "Save Profile"}
-            </Button>
+            {/* Show validation errors if any */}
+            {Object.keys(errors).length > 0 && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                    <p className="text-red-600 font-medium mb-2">Please fix the following errors:</p>
+                    <ul className="text-red-500 text-sm list-disc list-inside">
+                        {Object.entries(errors).map(([field, error]) => (
+                            <li key={field}>{field}: {(error as any)?.message || 'Invalid'}</li>
+                        ))}
+                    </ul>
+                </div>
+            )}
+
+            <div className="flex gap-4 mt-8">
+                <Button
+                    type="button"
+                    variant="outline"
+                    size="lg"
+                    className="w-full border-gray-300 text-gray-700 hover:bg-gray-50"
+                    onClick={() => router.push('/profile')}
+                >
+                    Cancel
+                </Button>
+                <Button type="submit" size="lg" className="w-full bg-blue-600 hover:bg-blue-700 text-white" disabled={submitting}>
+                    {submitting ? "Saving Profile..." : "Save Profile"}
+                </Button>
+            </div>
         </form>
     );
 }

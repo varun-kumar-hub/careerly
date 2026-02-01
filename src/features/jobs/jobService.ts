@@ -16,12 +16,98 @@ export interface JobListing {
     job_type?: 'job' | 'internship';
 }
 
+export interface JobFilterOptions {
+    type?: 'job' | 'internship' | 'all';
+    location?: string;
+    query?: string;
+    limit?: number;
+}
+
 const ADZUNA_APP_ID = process.env.ADZUNA_APP_ID;
 const ADZUNA_APP_KEY = process.env.ADZUNA_APP_KEY;
 const JOOBLE_API_KEY = process.env.JOOBLE_API_KEY;
 
-// Default freshness: 7 days
-const DEFAULT_MAX_DAYS = 7;
+// Default freshness: 14 days (2 weeks)
+const DEFAULT_MAX_DAYS = 14;
+
+/**
+ * Get ALL jobs without skill-based filtering.
+ * Used for "Explore All Jobs" section.
+ * Sorted by posted_date DESC (newest first).
+ */
+export async function getAllJobsUnfiltered(options: JobFilterOptions = {}): Promise<JobListing[]> {
+    const { type = 'all', location = '', query = '', limit = 50 } = options;
+    const supabase = await createClient();
+
+    // Freshness: 7 days
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - DEFAULT_MAX_DAYS);
+
+    let dbQuery = supabase
+        .from('jobs')
+        .select('*')
+        .gte('posted_date', cutoffDate.toISOString())
+        .order('posted_date', { ascending: false })
+        .limit(limit);
+
+    // Manual type filter (NOT skill-based)
+    if (type !== 'all') {
+        dbQuery = dbQuery.eq('job_type', type);
+    }
+
+    // Manual location filter
+    if (location) {
+        dbQuery = dbQuery.ilike('location', `%${location}%`);
+    }
+
+    // Manual keyword search
+    if (query) {
+        dbQuery = dbQuery.or(`title.ilike.%${query}%,description.ilike.%${query}%,company.ilike.%${query}%`);
+    }
+
+    const { data, error } = await dbQuery;
+
+    if (error) {
+        console.error('[getAllJobsUnfiltered] Error:', error);
+        return [];
+    }
+
+    return mapDbJobs(data || []);
+}
+
+/**
+ * Get jobs for recommendation matching.
+ * Returns raw jobs that will be scored client-side or in API route.
+ */
+export async function getRecommendedJobs(options: JobFilterOptions = {}): Promise<JobListing[]> {
+    const { type = 'all', limit = 100 } = options;
+    const supabase = await createClient();
+
+    // Freshness: 7 days
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - DEFAULT_MAX_DAYS);
+
+    let dbQuery = supabase
+        .from('jobs')
+        .select('*')
+        .gte('posted_date', cutoffDate.toISOString())
+        .order('posted_date', { ascending: false })
+        .limit(limit);
+
+    // Type filter
+    if (type !== 'all') {
+        dbQuery = dbQuery.eq('job_type', type);
+    }
+
+    const { data, error } = await dbQuery;
+
+    if (error) {
+        console.error('[getRecommendedJobs] Error:', error);
+        return [];
+    }
+
+    return mapDbJobs(data || []);
+}
 
 /**
  * Main Search Entry Point
@@ -89,7 +175,7 @@ export async function searchJobs(
             posted_date: j.posted_at ? new Date(j.posted_at).toISOString() : new Date().toISOString(),
             salary_min: j.salary_min,
             salary_max: j.salary_max,
-            job_type: (type === 'internship' || j.title.toLowerCase().includes('intern')) ? 'internship' : 'job'
+            job_type: checkIsInternship(j.title) ? 'internship' : 'job'
         }));
 
         await supabase.from('jobs').upsert(dbRows, {
@@ -104,7 +190,7 @@ export async function searchJobs(
         const unique = Array.from(new Map(merged.map(item => [item.url, item])).values())
             .filter(j => {
                 if (type === 'all') return true;
-                const isIntern = j.title.toLowerCase().includes('intern') || j.job_type === 'internship';
+                const isIntern = checkIsInternship(j.title) || j.job_type === 'internship';
                 return type === 'internship' ? isIntern : !isIntern;
             });
 
@@ -142,6 +228,11 @@ export async function ingestGlobalJobs() {
         }
     }
     return count;
+}
+
+function checkIsInternship(title: string): boolean {
+    const t = title.toLowerCase();
+    return t.includes('intern') || t.includes('trainee') || t.includes('co-op') || t.includes('student') || t.includes('apprentice');
 }
 
 // --- API FETCHERS ---

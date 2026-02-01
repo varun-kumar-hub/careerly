@@ -1,47 +1,81 @@
-import { NextResponse } from 'next/server'
-import { createClient } from '@/utils/supabase/server'
+import { NextResponse, type NextRequest } from 'next/server'
+import { createServerClient } from '@supabase/ssr'
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
     const { searchParams, origin } = new URL(request.url)
     const code = searchParams.get('code')
-    // if "next" is in param, use it as the redirect URL
-    const next = searchParams.get('next') ?? '/dashboard'
+    // Default redirect to /dashboard after successful auth
+    let next = searchParams.get('next') ?? '/dashboard'
 
-    console.log(`[Auth Callback] Processing code: ${code?.substring(0, 5)}...`);
-
-    if (code) {
-        const supabase = await createClient()
-        const { error } = await supabase.auth.exchangeCodeForSession(code)
-
-        if (error) {
-            console.error('[Auth Callback] Exchange Error:', error);
-        } else {
-            const { data: { session } } = await supabase.auth.getSession();
-            console.log('[Auth Callback] Session exchanged successfully');
-            console.log(`[Auth Callback] Session User: ${session?.user?.email}`);
-            console.log(`[Auth Callback] Access Token Present: ${!!session?.access_token}`);
-        }
-
-        if (!error) {
-            const forwardedHost = request.headers.get('x-forwarded-host') // original origin before load balancer
-            const isLocalEnv = process.env.NODE_ENV === 'development'
-
-            console.log(`[Auth Callback] Redirecting to ${next}`);
-
-            if (isLocalEnv) {
-                // we can be sure that there is no load balancer in between, so no need to watch for X-Forwarded-Host
-                return NextResponse.redirect(`${origin}${next}`)
-            } else if (forwardedHost) {
-                return NextResponse.redirect(`https://${forwardedHost}${next}`)
-            } else {
-                return NextResponse.redirect(`${origin}${next}`)
-            }
-        }
-    } else {
-        console.error('[Auth Callback] No code provided');
+    // Security: ensure next is a relative path
+    if (!next.startsWith('/')) {
+        next = '/dashboard'
     }
 
-    // return the user to an error page with instructions
-    const errorMessage = error?.message || 'No authentication code provided';
-    return NextResponse.redirect(`${origin}/auth/auth-code-error?error=${encodeURIComponent(errorMessage)}`)
+    if (code) {
+        // Track all cookies that need to be set on the response
+        const cookiesToSet: Array<{ name: string; value: string; options: any }> = []
+
+        const supabase = createServerClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+            {
+                cookies: {
+                    getAll() {
+                        return request.cookies.getAll()
+                    },
+                    setAll(cookies) {
+                        cookies.forEach((cookie) => {
+                            cookiesToSet.push(cookie)
+                        })
+                    },
+                },
+            }
+        )
+
+        const { error } = await supabase.auth.exchangeCodeForSession(code)
+
+        if (!error) {
+            // Force getUser() to ensure cookies are set synchronously
+            // The exchangeCodeForSession triggers async cookie setting
+            await supabase.auth.getUser()
+
+            // Determine the correct redirect URL
+            const forwardedHost = request.headers.get('x-forwarded-host')
+            const isLocalEnv = process.env.NODE_ENV === 'development'
+
+            let redirectUrl: string
+            if (isLocalEnv) {
+                redirectUrl = `${origin}${next}`
+            } else if (forwardedHost) {
+                redirectUrl = `https://${forwardedHost}${next}`
+            } else {
+                redirectUrl = `${origin}${next}`
+            }
+
+            // Create redirect response with session cookies
+            const response = NextResponse.redirect(redirectUrl)
+
+            // First, clear any existing Supabase cookies to prevent accumulation
+            const existingCookies = request.cookies.getAll()
+            for (const cookie of existingCookies) {
+                if (cookie.name.startsWith('sb-')) {
+                    response.cookies.set(cookie.name, '', {
+                        path: '/',
+                        expires: new Date(0),
+                        maxAge: 0,
+                    })
+                }
+            }
+
+            // Now set the fresh session cookies
+            cookiesToSet.forEach(({ name, value, options }) => {
+                response.cookies.set(name, value, options)
+            })
+
+            return response
+        }
+    }
+
+    return NextResponse.redirect(`${origin}/auth/auth-code-error`)
 }

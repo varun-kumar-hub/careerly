@@ -8,11 +8,11 @@ import { Badge } from "@/components/ui/Badge";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Briefcase, MapPin, Search } from "lucide-react";
-import { JobCard } from "@/components/jobs/JobCard";
-import { LocationFilter } from "@/components/jobs/LocationFilter";
+import { JobCard } from "@/features/jobs/components/JobCard";
+import { LocationFilter } from "@/features/jobs/components/LocationFilter";
 import { BackButton } from "@/components/ui/BackButton";
 import { JobsClient } from "./JobsClient";
-import { JobsSearch } from "@/components/jobs/JobsSearch";
+import { JobsSearch } from "@/features/jobs/components/JobsSearch";
 
 export default async function JobsPage({
     searchParams,
@@ -70,7 +70,7 @@ export default async function JobsPage({
     const days = parseInt(searchParams.days || "7", 10);
 
     const jobQuery = effectiveQuery || "Software Engineer";
-    const internQuery = effectiveQuery || "Software Intern";
+    const internQuery = effectiveQuery ? `${effectiveQuery} Intern` : "Software Intern";
 
     const location = searchParams.l || "";
     const mode = searchParams.mode || "";

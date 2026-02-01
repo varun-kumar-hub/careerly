@@ -17,6 +17,10 @@ create table profiles (
   work_mode text check (work_mode in ('remote', 'onsite', 'hybrid')),
   preferred_locations text[],
   experience_level text,
+  previous_company text,
+  previous_role text,
+  change_reason text,
+  gemini_api_key text,
 
   -- Metadata
   avatar_url text,

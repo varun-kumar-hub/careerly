@@ -174,16 +174,20 @@ export default function ProfilePage() {
 
                                 <div>
                                     <h4 className="text-sm font-medium text-gray-500 mb-1">Work Mode</h4>
-                                    <p className="text-sm text-gray-900 font-medium capitalize">
-                                        {profile.work_mode || "Flexible"}
-                                    </p>
+                                    <div className="flex flex-wrap gap-2 mt-2">
+                                        <Badge className="bg-blue-600 hover:bg-blue-700 text-white border-none px-3 py-1 capitalize">
+                                            {profile.work_mode || "Flexible"}
+                                        </Badge>
+                                    </div>
                                 </div>
 
                                 <div>
                                     <h4 className="text-sm font-medium text-gray-500 mb-1">Job Type</h4>
-                                    <p className="text-sm text-gray-900 font-medium capitalize">
-                                        {profile.job_type || "Any"}
-                                    </p>
+                                    <div className="flex flex-wrap gap-2 mt-2">
+                                        <Badge className="bg-blue-600 hover:bg-blue-700 text-white border-none px-3 py-1 capitalize">
+                                            {profile.job_type || "Any"}
+                                        </Badge>
+                                    </div>
                                 </div>
                             </div>
                         </Card>
