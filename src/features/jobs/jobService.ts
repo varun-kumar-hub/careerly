@@ -201,6 +201,7 @@ export async function searchJobs(
 }
 
 function mapDbJobs(data: any[]): JobListing[] {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return data.map((job: any) => ({
         id: job.source_id || job.id,
         title: job.title,
@@ -257,6 +258,7 @@ async function fetchFromAdzuna(query: string, location: string, country: string,
         const res = await fetch(url, { headers: { 'Accept': 'application/json' }, next: { revalidate: 3600 } });
         if (!res.ok) return [];
         const data = await res.json();
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         return (data.results || []).map((j: any) => ({
             id: String(j.id), title: j.title, company: j.company?.display_name || "Unknown",
             location: j.location?.display_name || "Unknown", description: j.description,
@@ -273,6 +275,7 @@ async function fetchFromJooble(query: string, location: string, country: string,
         const res = await fetch(`https://jooble.org/api/${JOOBLE_API_KEY}`, { method: 'POST', body: JSON.stringify(body), headers: { 'Content-Type': 'application/json' }, next: { revalidate: 3600 } });
         if (!res.ok) return [];
         const data = await res.json();
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         return (data.jobs || []).map((j: any) => ({
             id: String(j.id), title: j.title, company: j.company || "Unknown",
             location: j.location, description: j.snippet, url: j.link,
@@ -287,10 +290,71 @@ async function fetchFromRemotive(query: string, location: string, country: strin
         const res = await fetch(`https://remotive.com/api/remote-jobs?search=${encodeURIComponent(query)}`, { next: { revalidate: 3600 } });
         if (!res.ok) return [];
         const data = await res.json();
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         return (data.jobs || []).slice(0, 10).map((j: any) => ({
             id: String(j.id), title: j.title, company: j.company_name || "Unknown",
             location: j.candidate_required_location || 'Remote', description: j.description,
             url: j.url, source: 'remotive', posted_at: j.publication_date, logo_url: j.company_logo
         }));
     } catch { return []; }
+}
+
+/**
+ * Get personalized job recommendations based on Profile and Resume skills.
+ */
+export async function getPersonalizedJobs(
+    userId: string,
+    type: 'job' | 'internship' | 'all' = 'all',
+    limit: number = 10
+): Promise<JobListing[]> {
+    const supabase = await createClient();
+
+    // 1. Fetch Profile
+    const { data: profile } = await supabase
+        .from('profiles')
+        .select('skills, job_roles, preferred_locations, work_mode')
+        .eq('id', userId)
+        .single();
+
+    // 2. Fetch Resume Skills (latest analysis)
+    const { data: resume } = await supabase
+        .from('resume_analysis')
+        .select('extracted_skills')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+    // 3. Construct Query
+    const keywords = new Set<string>();
+
+    // Priority 1: Job Roles (e.g. "Frontend Developer")
+    if (profile?.job_roles) {
+        profile.job_roles.forEach((r: string) => keywords.add(r));
+    }
+
+    // Priority 2: Resume Skills (Top 3 usually most relevant if valid)
+    if (resume?.extracted_skills) {
+        resume.extracted_skills.slice(0, 3).forEach((s: string) => keywords.add(s));
+    }
+
+    // Priority 3: Profile Skills
+    if (profile?.skills) {
+        profile.skills.slice(0, 3).forEach((s: string) => keywords.add(s));
+    }
+
+    // Fallback
+    if (keywords.size === 0) {
+        keywords.add("Software Engineer");
+    }
+
+    // Create a combined query string (e.g., "Frontend Developer React TypeScript")
+    // Limit length to avoid API errors
+    const query = Array.from(keywords).join(" ").substring(0, 100);
+    const location = profile?.preferred_locations?.[0] || "";
+    const workMode = profile?.work_mode === 'remote' ? 'remote' : undefined;
+
+    console.log(`[Personalized] User: ${userId} | Query: "${query}" | Type: ${type}`);
+
+    return searchJobs(query, location, 'in', workMode, 14, type);
 }

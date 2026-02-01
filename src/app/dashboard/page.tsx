@@ -1,5 +1,5 @@
 import { createClient } from "@/utils/supabase/server";
-import { searchJobs } from "@/features/jobs/jobService";
+import { getPersonalizedJobs } from "@/features/jobs/jobService";
 import { DashboardClient } from "./DashboardClient";
 import { redirect } from "next/navigation";
 
@@ -11,37 +11,10 @@ export default async function DashboardPage() {
         redirect("/auth/login");
     }
 
-    // Fetch Profile for personalization
-    const { data: profile } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", user.id)
-        .single();
-
-    /**
-     * Personalize queries based on profile.
-     * Order of priority:
-     * 1. Target Roles (first role)
-     * 2. First 2 Skills
-     * 3. Fallback to "Software Engineer"
-     */
-    let jobQuery = "Software Engineer";
-    if (profile?.job_roles && profile.job_roles.length > 0) {
-        jobQuery = profile.job_roles[0];
-    } else if (profile?.skills && profile.skills.length > 0) {
-        // Just take the first few skills joined
-        jobQuery = profile.skills.slice(0, 2).join(" ");
-    }
-
-    let internQuery = "Software Intern";
-    if (jobQuery.toLowerCase().includes("intern")) {
-        internQuery = jobQuery;
-    } else if (profile?.academic_year?.toLowerCase().includes("student")) {
-        internQuery = `${jobQuery} Intern`;
-    }
-
-    const latestJobsPromise = searchJobs(jobQuery, "", "in", undefined, 7, 'job');
-    const internshipsPromise = searchJobs(internQuery, "", "in", undefined, 7, 'internship');
+    // Fetch Personalized Jobs & Internships
+    // This logic now accounts for Profile Skills + Resume Skills + Preferences
+    const latestJobsPromise = getPersonalizedJobs(user.id, 'job');
+    const internshipsPromise = getPersonalizedJobs(user.id, 'internship');
 
     const [latestJobs, internships] = await Promise.all([latestJobsPromise, internshipsPromise]);
 
@@ -49,5 +22,22 @@ export default async function DashboardPage() {
     const top5Jobs = latestJobs.slice(0, 5);
     const top5Internships = internships.slice(0, 5);
 
-    return <DashboardClient latestJobs={top5Jobs} internships={top5Internships} />;
+    // Check for active resume
+    const { data: resume } = await supabase
+        .from('resume_analysis')
+        .select('id')
+        .eq('user_id', user.id)
+        .limit(1); // Don't use single() to avoid error if 0 rows
+
+    const hasResume = !!(resume && resume.length > 0);
+
+    // Fetch Application Count
+    const { count: applicationCount } = await supabase
+        .from('applications')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id);
+
+    return <DashboardClient latestJobs={top5Jobs} internships={top5Internships} hasResume={hasResume} applicationCount={applicationCount || 0} />;
 }
+
+

@@ -10,13 +10,15 @@ export default async function ResumePage() {
     const { data: { user } } = await supabase.auth.getUser();
 
     // Fetch latest resume analysis
-    const { data: analysis } = await supabase
+    // Fetch ALL resume analyses for history
+    const { data: analyses } = await supabase
         .from("resume_analysis")
         .select("*")
         .eq("user_id", user?.id)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .single();
+        .order("created_at", { ascending: false });
+
+    // The most recent one is the current active resume
+    const currentResume = analyses && analyses.length > 0 ? analyses[0] : null;
 
     return (
         <div className="min-h-screen bg-white">
@@ -36,12 +38,12 @@ export default async function ResumePage() {
                             <h3 className="font-semibold mb-4 text-gray-900">Upload New Resume</h3>
                             <ResumeUploadForm />
                         </div>
-                        {analysis && (
+                        {currentResume && (
                             <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 text-sm">
                                 <p className="font-medium text-gray-900">Current File:</p>
                                 <div className="flex items-center gap-2 mt-1 text-gray-500">
                                     <FileText className="h-4 w-4" />
-                                    <span className="truncate">{analysis.file_name}</span>
+                                    <span className="truncate">{currentResume.file_name}</span>
                                 </div>
                             </div>
                         )}
@@ -49,19 +51,19 @@ export default async function ResumePage() {
 
                     {/* Analysis Results */}
                     <div className="space-y-6">
-                        {!analysis && (
+                        {!currentResume && (
                             <div className="flex h-64 items-center justify-center rounded-xl border border-dashed border-gray-300 bg-gray-50">
                                 <p className="text-gray-500">Upload a resume to see analysis.</p>
                             </div>
                         )}
 
-                        {analysis && (
+                        {currentResume && (
                             <>
                                 {/* Structural Check */}
                                 <div className="rounded-xl border border-gray-200 bg-white text-gray-900 shadow-sm p-6">
                                     <h3 className="text-lg font-semibold mb-4 text-gray-900">Structure Check</h3>
                                     <div className="grid grid-cols-2 gap-4">
-                                        {Object.entries(analysis.detected_sections).map(([section, detected]) => (
+                                        {Object.entries(currentResume.detected_sections).map(([section, detected]) => (
                                             <div key={section} className="flex items-center gap-2">
                                                 {detected ? (
                                                     <CheckCircle className="h-4 w-4 text-green-600" />
@@ -73,11 +75,11 @@ export default async function ResumePage() {
                                         ))}
                                     </div>
 
-                                    {analysis.structural_issues && (analysis.structural_issues as string[]).length > 0 && (
+                                    {currentResume.structural_issues && (currentResume.structural_issues as string[]).length > 0 && (
                                         <div className="mt-6 pt-4 border-t border-gray-100">
                                             <p className="font-medium text-amber-600 mb-2">Issues Detected:</p>
                                             <ul className="list-disc list-inside text-sm text-gray-600 space-y-1">
-                                                {(analysis.structural_issues as string[]).map((issue: string, i: number) => (
+                                                {(currentResume.structural_issues as string[]).map((issue: string, i: number) => (
                                                     <li key={i}>{issue}</li>
                                                 ))}
                                             </ul>
@@ -89,17 +91,38 @@ export default async function ResumePage() {
                                 <div className="rounded-xl border border-gray-200 bg-white text-gray-900 shadow-sm p-6">
                                     <h3 className="text-lg font-semibold mb-4 text-gray-900">Extracted Skills</h3>
                                     <div className="flex flex-wrap gap-2">
-                                        {(analysis.extracted_skills as string[])?.map((skill: string) => (
+                                        {(currentResume.extracted_skills as string[])?.map((skill: string) => (
                                             <span key={skill} className="inline-flex items-center rounded-full border border-blue-200 px-2.5 py-0.5 text-xs font-semibold bg-blue-50 text-blue-700">
                                                 {skill}
                                             </span>
                                         ))}
-                                        {(!analysis.extracted_skills || (analysis.extracted_skills as string[]).length === 0) && (
+                                        {(!currentResume.extracted_skills || (currentResume.extracted_skills as string[]).length === 0) && (
                                             <p className="text-sm text-gray-500">No specific skills detected from dictionary.</p>
                                         )}
                                     </div>
                                 </div>
                             </>
+                        )}
+
+                        {/* Resume History */}
+                        {analyses && analyses.length > 1 && (
+                            <div className="rounded-xl border border-gray-200 bg-white text-gray-900 shadow-sm p-6 mt-8">
+                                <h3 className="text-lg font-semibold mb-4 text-gray-900">Previous Resumes</h3>
+                                <div className="space-y-3">
+                                    {analyses.slice(1).map((item) => (
+                                        <div key={item.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-100">
+                                            <div className="flex items-center gap-3">
+                                                <FileText className="h-5 w-5 text-gray-400" />
+                                                <div>
+                                                    <p className="font-medium text-gray-900 text-sm">{item.file_name || "Unknown Filename"}</p>
+                                                    <p className="text-xs text-gray-500">{new Date(item.created_at).toLocaleDateString()} • {new Date(item.created_at).toLocaleTimeString()}</p>
+                                                </div>
+                                            </div>
+                                            {/* Could add a 'View' button here later if we have a view page */}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
                         )}
                     </div>
                 </div>

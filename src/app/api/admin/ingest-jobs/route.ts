@@ -3,7 +3,7 @@ import { createClient } from "@/utils/supabase/server";
 import { isAdminEmail } from "@/constants/adminEmails";
 import { ingestGlobalJobs } from "@/features/jobs/jobService";
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
             message: `Job database refreshed. ${count} jobs ingested.`,
             count
         });
-    } catch (error) {
+    } catch (error: unknown) {
         console.error("[Admin] Job ingestion error:", error);
         return NextResponse.json(
             { error: "Failed to refresh job database" },

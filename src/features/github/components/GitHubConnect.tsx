@@ -23,7 +23,7 @@ export function GitHubConnect({ compact = false }: { compact?: boolean }) {
 
     // Find GitHub identity from user's identities
     const githubIdentity = user?.identities?.find(
-        (identity: any) => identity.provider === "github"
+        (identity: { provider: string } & Partial<GitHubIdentity>) => identity.provider === "github"
     );
 
     // Also check user_metadata for GitHub data (set when signed up via GitHub)
