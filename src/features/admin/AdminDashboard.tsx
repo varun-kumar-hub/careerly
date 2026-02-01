@@ -93,6 +93,26 @@ export async function AdminDashboard() {
             </div>
 
             <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-8">
+                {/* Scraper Status Notification */}
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                        <h3 className="text-lg font-semibold text-blue-900">Scraper Configuration</h3>
+                        <p className="text-blue-700 mt-1">
+                            Incremental scraping is active. Jobs older than 6 months are automatically deleted from the database.
+                        </p>
+                    </div>
+                    <div className="flex bg-white/50 rounded-lg p-2 border border-blue-100 divide-x divide-blue-100 text-sm">
+                        <div className="px-3 py-1">
+                            <span className="block text-xs text-blue-500 font-semibold uppercase">Window</span>
+                            <span className="text-blue-900 font-medium">30 Days</span>
+                        </div>
+                        <div className="px-3 py-1">
+                            <span className="block text-xs text-blue-500 font-semibold uppercase">Retention</span>
+                            <span className="text-blue-900 font-medium">6 Months</span>
+                        </div>
+                    </div>
+                </div>
+
                 {/* Stats Grid */}
                 <div className="grid gap-6 md:grid-cols-3">
                     {stats.map((stat) => (
