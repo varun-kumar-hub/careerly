@@ -1,0 +1,23 @@
+name: Job Scraper (Every 3 Hours)
+
+on:
+  schedule:
+    # Run every 3 hours
+    - cron: '0 */3 * * *'
+  workflow_dispatch:
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Scraper Endpoint
+        run: |
+          if [ -z "${{ secrets.NEXT_PUBLIC_APP_URL }}" ]; then
+            echo "Error: NEXT_PUBLIC_APP_URL secret is not set."
+            exit 1
+          fi
+          
+          echo "Triggering scraper at ${{ secrets.NEXT_PUBLIC_APP_URL }}/api/cron/scrape"
+          
+          curl -v -X GET "${{ secrets.NEXT_PUBLIC_APP_URL }}/api/cron/scrape" \
+          -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"

@@ -184,8 +184,8 @@ export async function AdminDashboard() {
                                 <Briefcase className="h-6 w-6 text-green-600" />
                             </div>
                             <div>
-                                <h3 className="font-semibold text-gray-900">Refresh Job Database</h3>
-                                <p className="text-sm text-gray-500">Trigger a fresh scrape from all job sources</p>
+                                <h3 className="font-semibold text-gray-900">Trigger Manual Scrape</h3>
+                                <p className="text-sm text-gray-500">Fetch last 3 days of jobs immediately</p>
                             </div>
                         </div>
                     </Link>
