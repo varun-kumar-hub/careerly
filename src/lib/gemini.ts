@@ -46,22 +46,27 @@ export async function generateWithGemini(
             const text = await attemptGenerate(apiKey);
             return { text, success: true };
         } catch (error: any) {
-            // Check for recoverable errors (Rate Limit, Quota, Server Error)
-            const isRecoverable =
-                error.message?.includes("429") || // Rate limit
+            // Only fallback on rate limit errors (429), not quota/permission/server errors
+            const isRateLimited =
+                error.message?.includes("429") ||
                 error.toString().includes("429") ||
-                error.message?.includes("403") || // Quota or Permission
-                error.message?.includes("503") || // Overloaded
-                error.message?.includes("quota");
+                error.message?.toLowerCase().includes("rate limit") ||
+                error.message?.toLowerCase().includes("resource has been exhausted");
 
-            if (isRecoverable && SYSTEM_KEY && SYSTEM_KEY !== apiKey) {
-                console.warn("[Gemini] User key rate limited or failed. Falling back to system key.");
+            if (isRateLimited && SYSTEM_KEY && SYSTEM_KEY !== apiKey) {
+                console.warn("[Gemini] User API key rate limited. Falling back to system key.");
                 // 2. Fallback to System Key
-                const text = await attemptGenerate(SYSTEM_KEY);
-                return { text, success: true };
+                try {
+                    const text = await attemptGenerate(SYSTEM_KEY);
+                    return { text, success: true };
+                } catch (fallbackError) {
+                    console.error("[Gemini] Fallback key also failed:", fallbackError);
+                    throw fallbackError;
+                }
             }
 
-            throw error; // Re-throw if not recoverable or no system key
+            // For other errors (quota exceeded, permission denied, etc.), don't fallback
+            throw error;
         }
     } catch (error) {
         console.error("[Gemini Error]", error);

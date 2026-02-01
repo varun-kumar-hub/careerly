@@ -36,15 +36,13 @@ export async function tailorResumeForJob(
         };
     }
 
-    // Fetch resume data
+    // Fetch resume data (don't use .single() to avoid errors when no resume exists)
     const { data: resumeData } = await supabase
         .from("resume_analysis")
-        .select("extracted_text, summary, extracted_skills")
+        .select("extracted_text, extracted_skills")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false })
-        .limit(1)
-        .limit(1)
-        .single();
+        .limit(1);
 
     // Fetch user profile for API key
     const { data: profile } = await supabase
@@ -53,7 +51,7 @@ export async function tailorResumeForJob(
         .eq("id", user.id)
         .single();
 
-    if (!resumeData) {
+    if (!resumeData || resumeData.length === 0) {
         return {
             suggestions: "",
             success: false,
@@ -61,8 +59,9 @@ export async function tailorResumeForJob(
         };
     }
 
-    const resumeContext = resumeData.extracted_text ||
-        `Summary: ${resumeData.summary}\nSkills: ${resumeData.extracted_skills?.join(", ")}`;
+    const resume = resumeData[0];
+    const resumeContext = resume.extracted_text ||
+        `Skills: ${resume.extracted_skills?.join(", ")}`;
 
     try {
         if (!profile || !profile.gemini_api_key) {

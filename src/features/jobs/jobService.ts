@@ -245,14 +245,15 @@ export async function getPersonalizedJobs(
         .eq('id', userId)
         .single();
 
-    // 2. Fetch Resume Skills (latest analysis)
-    const { data: resume } = await supabase
+    // 2. Fetch Resume Skills (latest analysis) - use limit instead of single to avoid errors
+    const { data: resumeData } = await supabase
         .from('resume_analysis')
         .select('extracted_skills')
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
+        .limit(1);
+
+    const resume = resumeData && resumeData.length > 0 ? resumeData[0] : null;
 
     // 3. Construct Query
     const keywords = new Set<string>();
