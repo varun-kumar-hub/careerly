@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
-import { getRecommendedJobs, JobListing } from '@/features/jobs/jobService';
+import { getPersonalizedJobs, JobListing } from '@/features/jobs/jobService';
 import { calculateMatchScore, MatchResult } from '@/features/matching/matcher';
 
 export const dynamic = 'force-dynamic';
@@ -66,13 +66,12 @@ export async function GET(request: NextRequest) {
 
         // Fetch jobs and calculate match scores
         const { searchParams } = new URL(request.url);
-        const type = searchParams.get('type') || 'all';
+        const type = (searchParams.get('type') || 'all') as 'job' | 'internship' | 'all';
         const limit = parseInt(searchParams.get('limit') || '30', 10);
 
-        const jobs = await getRecommendedJobs({
-            type: type as 'job' | 'internship' | 'all',
-            limit: 100, // Fetch more to filter
-        });
+        // Fetch candidate jobs using personalized service
+        // We ask for more than 'limit' so we can filter locally by score
+        const jobs = await getPersonalizedJobs(user.id, type, 100);
 
         // Calculate match scores and filter
         const scoredJobs: RecommendedJob[] = [];

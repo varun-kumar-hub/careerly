@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
-import { getAllJobsUnfiltered, JobListing } from '@/features/jobs/jobService';
+import { searchJobs, JobListing } from '@/features/jobs/jobService';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,17 +20,21 @@ export async function GET(request: NextRequest) {
     try {
         const { searchParams } = new URL(request.url);
 
-        const type = searchParams.get('type') || 'all';
+        const type = (searchParams.get('type') || 'all') as 'job' | 'internship' | 'all';
         const location = searchParams.get('location') || '';
         const query = searchParams.get('q') || '';
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const limit = parseInt(searchParams.get('limit') || '50', 10);
 
-        const jobs = await getAllJobsUnfiltered({
-            type: type as 'job' | 'internship' | 'all',
-            location,
+        // searchJobs(query, location, country, workMode, maxDays, type)
+        const jobs = await searchJobs(
             query,
-            limit,
-        });
+            location,
+            'in', // Default country
+            undefined, // Work mode
+            30, // Default 30 days
+            type
+        );
 
         return NextResponse.json({
             success: true,
