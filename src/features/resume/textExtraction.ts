@@ -1,6 +1,5 @@
 
 import mammoth from "mammoth";
-// @ts-ignore
 import PDFParser from "pdf2json";
 
 /**

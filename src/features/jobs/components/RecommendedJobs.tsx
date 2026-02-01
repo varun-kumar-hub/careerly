@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { JobCard } from "./JobCard";
 import { Badge } from "@/components/ui/Badge";
 import { Loader2, Sparkles, AlertCircle, User } from "lucide-react";
@@ -27,12 +27,9 @@ interface RecommendedJobsProps {
  * Only displays jobs with >0% match.
  */
 export function RecommendedJobs({ userSkills, jobs, loading }: RecommendedJobsProps) {
-    const [recommendedJobs, setRecommendedJobs] = useState<RecommendedJob[]>([]);
-
-    useEffect(() => {
+    const recommendedJobs = useMemo(() => {
         if (userSkills.length === 0 || jobs.length === 0) {
-            setRecommendedJobs([]);
-            return;
+            return [];
         }
 
         // Calculate match scores for each job
@@ -60,7 +57,7 @@ export function RecommendedJobs({ userSkills, jobs, loading }: RecommendedJobsPr
         scoredJobs.sort((a, b) => b.matchScore - a.matchScore);
 
         // Limit to top 12
-        setRecommendedJobs(scoredJobs.slice(0, 12));
+        return scoredJobs.slice(0, 12);
     }, [userSkills, jobs]);
 
     // No skills state

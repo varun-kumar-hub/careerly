@@ -20,9 +20,13 @@ export function JobsSearch({ defaultQuery, defaultLocation, hasProfile }: JobsSe
     const [location, setLocation] = useState(defaultLocation);
 
     // Sync state if URL changes externally (e.g. back button)
+    // Sync state if URL changes externally (e.g. back button)
     useEffect(() => {
-        setQuery(searchParams.get("q") || "");
-        setLocation(searchParams.get("l") || "");
+        const q = searchParams.get("q") || "";
+        const l = searchParams.get("l") || "";
+        if (q !== query) setQuery(q);
+        if (l !== location) setLocation(l);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [searchParams]);
 
     const handleSearch = (e?: React.FormEvent) => {

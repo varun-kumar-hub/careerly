@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { PostgrestError } from "@supabase/supabase-js";
@@ -30,7 +30,7 @@ export function useProfile() {
     const [error, setError] = useState<PostgrestError | null>(null);
     const supabase = createClient();
 
-    const fetchProfile = async () => {
+    const fetchProfile = useCallback(async () => {
         if (!user) return;
         setLoading(true);
         const { data, error } = await supabase
@@ -45,7 +45,7 @@ export function useProfile() {
             setProfile(data);
         }
         setLoading(false);
-    };
+    }, [user, supabase]);
 
     const updateProfile = async (updates: Partial<ProfileData>) => {
         if (!user) return { error: "No user" };
