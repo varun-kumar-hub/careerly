@@ -27,7 +27,8 @@ export default async function DashboardPage() {
         .from('resume_analysis')
         .select('id')
         .eq('user_id', user.id)
-        .limit(1); // Don't use single() to avoid error if 0 rows
+        .limit(1)
+        .order('created_at', { ascending: false });
 
     const hasResume = !!(resume && resume.length > 0);
 

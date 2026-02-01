@@ -22,17 +22,22 @@ export default function CoverLetterPage() {
             const supabase = createClient();
             const { data: { user } } = await supabase.auth.getUser();
             if (user) {
-                // Fetch resume data
+                // Fetch resume data (use limit(1) instead of single() to avoid errors)
                 const { data: resumeData } = await supabase
                     .from("resume_analysis")
-                    .select("summary, extracted_skills")
+                    .select("extracted_text, extracted_skills, file_name")
                     .eq("user_id", user.id)
                     .order("created_at", { ascending: false })
-                    .limit(1)
-                    .single();
+                    .limit(1);
 
-                if (resumeData) {
-                    setResumeSummary(resumeData.summary || `Skills: ${resumeData.extracted_skills?.join(", ")}`);
+                if (resumeData && resumeData.length > 0) {
+                    const resume = resumeData[0];
+                    // Create a summary from extracted text (first 500 chars) or skills
+                    const textSummary = resume.extracted_text?.substring(0, 500) || '';
+                    const skillsSummary = resume.extracted_skills?.length > 0
+                        ? `Skills: ${resume.extracted_skills.join(", ")}`
+                        : '';
+                    setResumeSummary(textSummary || skillsSummary || 'Resume on file');
                 }
 
                 // Fetch user profile for name
@@ -79,7 +84,7 @@ export default function CoverLetterPage() {
     };
 
     return (
-        <div className="min-h-screen bg-gray-950 p-4 sm:p-8">
+        <div className="min-h-screen bg-gray-50 p-4 sm:p-8">
             <div className="max-w-5xl mx-auto space-y-6">
                 <div className="flex items-center gap-4">
                     <BackButton fallbackUrl="/dashboard" />
@@ -95,12 +100,12 @@ export default function CoverLetterPage() {
                 <div className="grid lg:grid-cols-2 gap-8">
                     {/* Input Section */}
                     <div className="space-y-4">
-                        <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
-                            <label className="block text-sm font-medium text-gray-300 mb-2">
+                        <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
                                 Job Description
                             </label>
                             <textarea
-                                className="w-full h-64 bg-gray-950 border border-gray-800 rounded-lg p-4 text-gray-300 focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 outline-none resize-none"
+                                className="w-full h-64 bg-white border border-gray-300 rounded-lg p-4 text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none resize-none"
                                 placeholder="Paste the job requirements here... (minimum 50 characters)"
                                 value={jobDescription}
                                 onChange={(e) => setJobDescription(e.target.value)}
@@ -141,9 +146,9 @@ export default function CoverLetterPage() {
 
                     {/* Output Section */}
                     <div className="space-y-4">
-                        <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 h-full flex flex-col">
+                        <div className="bg-white border border-gray-200 rounded-xl p-6 h-full flex flex-col shadow-sm">
                             <div className="flex items-center justify-between mb-2">
-                                <label className="block text-sm font-medium text-gray-300">
+                                <label className="block text-sm font-medium text-gray-700">
                                     Your Cover Letter
                                 </label>
                                 {generatedLetter && (
@@ -183,10 +188,10 @@ export default function CoverLetterPage() {
                                     </div>
                                 </>
                             ) : (
-                                <div className="flex-grow flex flex-col items-center justify-center text-gray-600 border-2 border-dashed border-gray-800 rounded-lg bg-gray-950/50 min-h-[300px]">
+                                <div className="flex-grow flex flex-col items-center justify-center text-gray-400 border-2 border-dashed border-gray-200 rounded-lg bg-white min-h-[300px]">
                                     <Sparkles className="h-12 w-12 mb-4 opacity-20 text-purple-500" />
                                     <p className="text-sm">AI-generated letter will appear here</p>
-                                    <p className="text-xs text-gray-500 mt-2">Powered by Gemini 2.5 Flash</p>
+                                    <p className="text-xs text-gray-400 mt-2">Powered by Gemini 2.5 Flash</p>
                                 </div>
                             )}
                         </div>

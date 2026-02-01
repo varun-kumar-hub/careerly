@@ -1,5 +1,5 @@
 
-import { createClient } from "@/utils/supabase/server";
+import { createClient, createServiceRoleClient } from "@/utils/supabase/server";
 
 export interface JobListing {
     id: string;
@@ -104,7 +104,8 @@ export async function searchJobs(
  * Securely Upsert Jobs with Deduplication
  */
 export async function upsertJobs(jobs: JobListing[]) {
-    const supabase = await createClient();
+    // Use service role client to bypass RLS policies for admin operations
+    const supabase = createServiceRoleClient();
 
     const dbRows = jobs.map(j => ({
         title: j.title,
@@ -129,7 +130,9 @@ export async function upsertJobs(jobs: JobListing[]) {
         ignoreDuplicates: true
     });
 
-    if (error) console.error("Upsert error:", error);
+    if (error) {
+        console.error("Upsert error:", error.message || error);
+    }
 }
 
 // --- API FETCHERS ---

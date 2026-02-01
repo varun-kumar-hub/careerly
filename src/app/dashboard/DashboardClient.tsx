@@ -1,12 +1,12 @@
 "use client";
-
+import { useState, useTransition } from "react";
 import { useProfile } from "@/hooks/useProfile";
 import { Button } from "@/components/ui/Button";
 import Link from "next/link";
 import { Badge } from "@/components/ui/Badge";
 import { Briefcase, GraduationCap, Plus, Wand2, FileText, MessageSquare, TrendingUp, CheckCircle, RefreshCw } from "lucide-react";
 import { cn } from "@/utils/cn";
-import { useState } from "react";
+
 import { JobListing } from "@/features/jobs/jobService";
 import { calculateMatchScore } from "@/features/matching/matcher";
 import { JobCard } from "@/features/jobs/components/JobCard";
@@ -24,6 +24,7 @@ import { useRouter } from "next/navigation";
 export function DashboardClient({ latestJobs, internships, hasResume, applicationCount }: DashboardClientProps) {
     const { profile, loading } = useProfile();
     const [view, setView] = useState<'jobs' | 'internships'>('jobs');
+    const [isPending, startTransition] = useTransition();
     const router = useRouter();
 
     return (
@@ -127,6 +128,17 @@ export function DashboardClient({ latestJobs, internships, hasResume, applicatio
                                 <p className="text-gray-500 mt-1">
                                     {latestJobs.length} Jobs & {internships.length} Internships based on your profile.
                                 </p>
+                                <Button
+                                    variant="link"
+                                    className="px-0 mt-2 h-auto text-blue-600 text-xs"
+                                    onClick={() => {
+                                        const element = document.getElementById('job-recommendations-section');
+                                        element?.scrollIntoView({ behavior: 'smooth' });
+                                    }}
+                                    type="button"
+                                >
+                                    View matched jobs →
+                                </Button>
                             </div>
                         ) : (
                             <p className="text-sm text-gray-500 mt-2">
@@ -159,7 +171,7 @@ export function DashboardClient({ latestJobs, internships, hasResume, applicatio
             </div>
 
             {/* Jobs/Internships Toggle & Grid */}
-            <div className="mt-8 space-y-6">
+            <div className="mt-8 space-y-6" id="job-recommendations-section">
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                     <h2 className="text-2xl font-bold tracking-tight text-gray-900">
                         {view === 'jobs' ? 'Recommended Jobs' : 'Top Internships'}
