@@ -44,7 +44,7 @@ export default async function Home() {
           </p>
           <div className="flex items-center justify-center gap-4 pt-6">
             <Button size="lg" className="h-12 px-8 text-lg" asChild>
-              <Link href="/dashboard">Get Started &rarr;</Link>
+              <Link href={user ? "/dashboard" : "/auth/signup"}>Get Started &rarr;</Link>
             </Button>
             <Button size="lg" variant="outline" className="h-12 px-8 text-lg" asChild>
               <Link href="#features">Learn More</Link>

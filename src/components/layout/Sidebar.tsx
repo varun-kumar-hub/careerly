@@ -42,7 +42,7 @@ export function Sidebar() {
     const handleLogout = async () => {
         setIsCleaning(true);
         try {
-            // Requirement: Remove jobs posted before 1 month on logout
+            // Remove jobs posted before 30 days on logout
             await cleanupOldJobsAction();
         } catch (error) {
             console.error("Cleanup failed:", error);
