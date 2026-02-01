@@ -117,22 +117,31 @@ export function DashboardClient({ latestJobs, internships, hasResume, applicatio
 
                 <div className="rounded-xl border border-gray-200 bg-white text-card-foreground shadow-sm p-6 hover:shadow-md transition-shadow">
                     <h3 className="font-semibold leading-none tracking-tight text-gray-900">Job Recommendations</h3>
-                    {latestJobs.length > 0 || internships.length > 0 ? (
-                        <div className="mt-2 text-sm">
-                            <p className="text-green-600 font-medium flex items-center gap-2">
-                                <CheckCircle className="h-4 w-4" />
-                                Matches Found
+                    {profile?.skills && profile.skills.length > 0 ? (
+                        latestJobs.length > 0 || internships.length > 0 ? (
+                            <div className="mt-2 text-sm">
+                                <p className="text-green-600 font-medium flex items-center gap-2">
+                                    <CheckCircle className="h-4 w-4" />
+                                    Matches Found
+                                </p>
+                                <p className="text-gray-500 mt-1">
+                                    {latestJobs.length} Jobs & {internships.length} Internships based on your profile.
+                                </p>
+                            </div>
+                        ) : (
+                            <p className="text-sm text-gray-500 mt-2">
+                                No specific matches found right now. Try updating your preferences.
                             </p>
-                            <p className="text-gray-500 mt-1">
-                                {latestJobs.length} Jobs & {internships.length} Internships based on your profile.
-                            </p>
-                        </div>
+                        )
                     ) : (
-                        <p className="text-sm text-gray-500 mt-2">
-                            {profile?.skills && profile.skills.length > 0
-                                ? "No specific matches found right now. Try updating your preferences."
-                                : "Complete your profile and resume to see matches."}
-                        </p>
+                        <>
+                            <p className="text-sm text-gray-500 mt-2">
+                                Complete your profile to see personalized job matches.
+                            </p>
+                            <Button variant="link" className="px-0 mt-4 h-auto text-primary" asChild>
+                                <Link href="/onboarding">Complete profile &rarr;</Link>
+                            </Button>
+                        </>
                     )}
                 </div>
 

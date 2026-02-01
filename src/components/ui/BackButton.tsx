@@ -20,6 +20,7 @@ export function BackButton({ label = "Back", fallbackUrl = "/dashboard" }: BackB
 
     return (
         <Button
+            type="button"
             variant="ghost"
             onClick={handleBack}
             className="gap-2 text-muted-foreground hover:text-foreground mb-4 pl-0 hover:bg-transparent"

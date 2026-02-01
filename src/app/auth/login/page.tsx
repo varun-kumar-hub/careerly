@@ -109,6 +109,7 @@ export default function LoginPage() {
 
                 <div className="space-y-4">
                     <Button
+                        type="button"
                         onClick={signInWithGoogle}
                         variant="outline"
                         className="w-full bg-white text-gray-700 hover:bg-gray-50 border-gray-300 flex items-center justify-center gap-2"
@@ -135,6 +136,7 @@ export default function LoginPage() {
                     </Button>
 
                     <Button
+                        type="button"
                         onClick={signInWithGithub}
                         className="w-full bg-[#24292e] text-white hover:bg-[#2f363d] flex items-center justify-center gap-2"
                     >

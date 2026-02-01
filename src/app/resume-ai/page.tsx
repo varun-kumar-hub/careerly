@@ -76,6 +76,7 @@ Include:
                                     {jobDescription.length}/50 minimum characters
                                 </p>
                                 <Button
+                                    type="button"
                                     onClick={handleTailor}
                                     disabled={loading || jobDescription.length < 50}
                                     className="bg-blue-600 hover:bg-blue-700 text-white"

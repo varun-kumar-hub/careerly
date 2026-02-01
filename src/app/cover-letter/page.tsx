@@ -115,6 +115,7 @@ export default function CoverLetterPage() {
                                     )}
                                 </div>
                                 <Button
+                                    type="button"
                                     onClick={handleGenerate}
                                     disabled={loading || !jobDescription || jobDescription.length < 50}
                                     className="bg-purple-600 hover:bg-purple-700 text-white"
@@ -147,8 +148,8 @@ export default function CoverLetterPage() {
                                 </label>
                                 {generatedLetter && (
                                     <span className={`text-xs px-2 py-1 rounded-full ${isAIGenerated
-                                            ? "bg-green-500/20 text-green-400"
-                                            : "bg-yellow-500/20 text-yellow-400"
+                                        ? "bg-green-500/20 text-green-400"
+                                        : "bg-yellow-500/20 text-yellow-400"
                                         }`}>
                                         {isAIGenerated ? "✨ AI Generated" : "📝 Template"}
                                     </span>
@@ -171,6 +172,7 @@ export default function CoverLetterPage() {
                                     />
                                     <div className="mt-4 flex justify-end gap-2">
                                         <Button
+                                            type="button"
                                             variant="outline"
                                             onClick={handleCopy}
                                             className="border-gray-700 hover:bg-gray-800 text-gray-300"

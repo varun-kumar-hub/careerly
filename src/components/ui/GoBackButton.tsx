@@ -26,6 +26,7 @@ export function GoBackButton({ className, label = "Go Back", fallbackUrl }: GoBa
 
     return (
         <Button
+            type="button"
             variant="ghost"
             onClick={handleBack}
             className={cn("gap-2 pl-0 hover:bg-transparent hover:text-blue-600 text-gray-500", className)}

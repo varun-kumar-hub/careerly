@@ -76,6 +76,7 @@ The AI will generate:
                                     {jobDescription.length}/50 minimum characters
                                 </p>
                                 <Button
+                                    type="button"
                                     onClick={handleGenerate}
                                     disabled={loading || jobDescription.length < 50}
                                     className="bg-green-600 hover:bg-green-700 text-white"
