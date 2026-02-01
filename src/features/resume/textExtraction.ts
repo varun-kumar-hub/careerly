@@ -23,7 +23,7 @@ export async function extractText(fileBuffer: Buffer, fileType: string): Promise
 async function extractTextFromPDF(buffer: Buffer): Promise<string> {
     return new Promise((resolve, reject) => {
         try {
-            const pdfParser = new PDFParser(null, 1); // 1 = text content only
+            const pdfParser = new PDFParser(null, true); // true = raw text mode
 
             pdfParser.on("pdfParser_dataError", (errData: any) => {
                 console.error("PDF2JSON Error:", errData);
