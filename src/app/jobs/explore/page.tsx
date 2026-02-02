@@ -2,7 +2,6 @@ import { createClient } from "@/utils/supabase/server";
 import { searchJobs } from "@/features/jobs/jobService";
 import { redirect } from "next/navigation";
 import { BackButton } from "@/components/ui/BackButton";
-import { JobsSearch } from "@/features/jobs/components/JobsSearch";
 import { ExploreAllJobs } from "@/features/jobs/components/ExploreAllJobs";
 import { Search } from "lucide-react";
 
@@ -45,7 +44,7 @@ export default async function ExploreJobsPage({
         <div className="min-h-screen bg-white">
             {/* Header Section */}
             <div className="relative border-b border-gray-200 bg-white sticky top-0 z-20 shadow-sm">
-                <div className="max-w-7xl mx-auto p-4 sm:p-6 space-y-4">
+                <div className="max-w-7xl mx-auto p-4 sm:p-6">
                     <div className="flex items-center gap-4">
                         <BackButton fallbackUrl="/dashboard" />
                         <div className="flex items-center gap-3">
@@ -54,14 +53,6 @@ export default async function ExploreJobsPage({
                                 Explore All Jobs
                             </h1>
                         </div>
-                    </div>
-
-                    <div className="w-full">
-                        <JobsSearch
-                            defaultQuery={searchParams.q || ""}
-                            defaultLocation={searchParams.l || ""}
-                            hasProfile={hasProfile}
-                        />
                     </div>
                 </div>
             </div>

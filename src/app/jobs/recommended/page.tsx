@@ -92,7 +92,8 @@ export default async function RecommendedJobsPage({
             <div className="max-w-7xl mx-auto p-4 sm:p-6">
                 <RecommendedJobs
                     userSkills={userSkillsArray}
-                    jobs={allJobs}
+                    jobs={jobs}
+                    internships={internships}
                 />
             </div>
         </div>
