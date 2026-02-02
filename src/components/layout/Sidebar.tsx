@@ -13,14 +13,17 @@ import {
     LogOut,
     Settings,
     User,
-    Shield
+    Shield,
+    Sparkles,
+    Search
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { GitHubConnect } from "@/features/github/components/GitHubConnect";
 
 const navItems = [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-    { name: "Find Jobs", href: "/jobs", icon: Briefcase },
+    { name: "Recommended Jobs", href: "/jobs/recommended", icon: Sparkles },
+    { name: "Explore Jobs", href: "/jobs/explore", icon: Search },
     { name: "My Resume", href: "/resume", icon: FileText },
     { name: "Applications", href: "/applications", icon: Home },
     { name: "API Key", href: "/settings/ai", icon: Settings },
