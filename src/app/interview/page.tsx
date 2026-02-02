@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/Button";
 import { BackButton } from "@/components/ui/BackButton";
 import { generateInterviewQuestions } from "@/features/interview/actions";
-import { MessageSquare, Loader2, FileText, Sparkles, AlertCircle, Lightbulb } from "lucide-react";
-import ReactMarkdown from "react-markdown";
+import { MessageSquare } from "lucide-react";
+import { JobDescriptionInput } from "@/components/ui/JobDescriptionInput";
+import { QuestionsList, InterviewTips } from "@/features/interview/components";
 
 export default function InterviewPrepPage() {
     const [jobDescription, setJobDescription] = useState("");
@@ -54,97 +54,20 @@ export default function InterviewPrepPage() {
                 <div className="grid lg:grid-cols-2 gap-8">
                     {/* Input Section */}
                     <div className="space-y-4">
-                        <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                <FileText className="inline h-4 w-4 mr-2" />
-                                Job Description
-                            </label>
-                            <textarea
-                                className="w-full h-72 bg-white border border-gray-300 rounded-lg p-4 text-gray-900 focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none resize-none"
-                                placeholder="Paste the job description to get relevant interview questions...
-
-The AI will generate:
-• Behavioral questions (STAR format)
-• Technical/skill-based questions
-• Situational questions
-• Culture fit questions"
-                                value={jobDescription}
-                                onChange={(e) => setJobDescription(e.target.value)}
-                            />
-                            <div className="mt-4 flex items-center justify-between">
-                                <p className="text-xs text-gray-500">
-                                    {jobDescription.length}/50 minimum characters
-                                </p>
-                                <Button
-                                    type="button"
-                                    onClick={handleGenerate}
-                                    disabled={loading || jobDescription.length < 50}
-                                    className="bg-green-600 hover:bg-green-700 text-white"
-                                >
-                                    {loading ? (
-                                        <>
-                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                            Generating...
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Sparkles className="mr-2 h-4 w-4" />
-                                            Generate Questions
-                                        </>
-                                    )}
-                                </Button>
-                            </div>
-                        </div>
-
-                        {/* Tips */}
-                        <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4">
-                            <h3 className="text-green-400 font-medium mb-2 flex items-center gap-2">
-                                <Lightbulb className="h-4 w-4" />
-                                Interview Tips
-                            </h3>
-                            <ul className="text-sm text-gray-400 space-y-1">
-                                <li>• Use the STAR method for behavioral questions</li>
-                                <li>• Practice answers out loud, not just in your head</li>
-                                <li>• Prepare 2-3 questions to ask the interviewer</li>
-                                <li>• Research the company culture beforehand</li>
-                            </ul>
-                        </div>
+                        <JobDescriptionInput
+                            jobDescription={jobDescription}
+                            onJobDescriptionChange={setJobDescription}
+                            onGenerate={handleGenerate}
+                            loading={loading}
+                            buttonColor="bg-green-600 hover:bg-green-700"
+                            buttonText="Generate Questions"
+                        />
+                        <InterviewTips />
                     </div>
 
                     {/* Output Section */}
                     <div className="space-y-4">
-                        <div className="bg-white border border-gray-200 rounded-xl p-6 min-h-[500px] flex flex-col shadow-sm">
-                            <label className="block text-sm font-medium text-gray-700 mb-4">
-                                <MessageSquare className="inline h-4 w-4 mr-2 text-green-500" />
-                                Practice Questions
-                            </label>
-
-                            {error && (
-                                <div className="mb-4 p-4 bg-red-500/10 border border-red-500/30 rounded-lg flex items-center gap-3 text-red-400">
-                                    <AlertCircle className="h-5 w-5 flex-shrink-0" />
-                                    <p>{error}</p>
-                                </div>
-                            )}
-
-                            {questions ? (
-                                <div className="flex-grow overflow-auto bg-white border border-gray-200 rounded-lg p-6">
-                                    <div className="prose prose-sm max-w-none text-gray-800">
-                                        <ReactMarkdown>{questions}</ReactMarkdown>
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="flex-grow flex flex-col items-center justify-center text-gray-400 border-2 border-dashed border-gray-200 rounded-lg bg-white">
-                                    <MessageSquare className="h-16 w-16 mb-4 opacity-20 text-green-500" />
-                                    <p className="text-sm text-center">
-                                        Paste a job description to generate <br />
-                                        tailored interview questions
-                                    </p>
-                                    <p className="text-xs text-gray-500 mt-2">
-                                        Powered by Gemini 2.5 Flash
-                                    </p>
-                                </div>
-                            )}
-                        </div>
+                        <QuestionsList questions={questions} error={error} />
                     </div>
                 </div>
             </div>

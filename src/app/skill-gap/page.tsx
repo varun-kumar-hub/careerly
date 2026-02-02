@@ -5,8 +5,13 @@ import { Button } from "@/components/ui/Button";
 import { BackButton } from "@/components/ui/BackButton";
 import { analyzeSkillGap } from "@/features/skill-gap/actions";
 import { useProfile } from "@/hooks/useProfile";
-import { BarChart3, Loader2, FileText, Sparkles, AlertCircle, CheckCircle, XCircle, TrendingUp } from "lucide-react";
-import ReactMarkdown from "react-markdown";
+import { BarChart3, Loader2, FileText, Sparkles, AlertCircle } from "lucide-react";
+import {
+    SkillComparisonGrid,
+    MatchScoreCard,
+    AnalysisResults,
+    UserSkillsDisplay
+} from "@/features/skill-gap/components";
 
 export default function SkillGapPage() {
     const { profile, loading: profileLoading } = useProfile();
@@ -65,27 +70,7 @@ export default function SkillGapPage() {
                 </div>
 
                 {/* User Skills */}
-                {!profileLoading && (
-                    <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
-                        <h3 className="text-sm font-medium text-gray-400 mb-2">Your Skills</h3>
-                        {profile?.skills && profile.skills.length > 0 ? (
-                            <div className="flex flex-wrap gap-2">
-                                {profile.skills.map((skill, idx) => (
-                                    <span
-                                        key={idx}
-                                        className="px-3 py-1 bg-gray-800 text-gray-300 rounded-full text-sm"
-                                    >
-                                        {skill}
-                                    </span>
-                                ))}
-                            </div>
-                        ) : (
-                            <p className="text-yellow-400 text-sm">
-                                No skills found. Please update your profile to use this feature.
-                            </p>
-                        )}
-                    </div>
-                )}
+                <UserSkillsDisplay skills={profile?.skills} loading={profileLoading} />
 
                 <div className="grid lg:grid-cols-2 gap-8">
                     {/* Input Section */}
@@ -135,80 +120,9 @@ export default function SkillGapPage() {
                             </div>
                         )}
 
-                        {matchPercentage > 0 && (
-                            <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
-                                <div className="flex items-center justify-between mb-4">
-                                    <h3 className="text-lg font-medium text-white">Match Score</h3>
-                                    <span className={`text-3xl font-bold ${matchPercentage >= 70 ? "text-green-500" :
-                                            matchPercentage >= 40 ? "text-yellow-500" : "text-red-500"
-                                        }`}>
-                                        {matchPercentage}%
-                                    </span>
-                                </div>
-                                <div className="w-full bg-gray-800 rounded-full h-3">
-                                    <div
-                                        className={`h-3 rounded-full transition-all duration-500 ${matchPercentage >= 70 ? "bg-green-500" :
-                                                matchPercentage >= 40 ? "bg-yellow-500" : "bg-red-500"
-                                            }`}
-                                        style={{ width: `${matchPercentage}%` }}
-                                    />
-                                </div>
-                            </div>
-                        )}
-
-                        {(matchedSkills.length > 0 || skillGaps.length > 0) && (
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4">
-                                    <h4 className="text-green-400 font-medium mb-2 flex items-center gap-2">
-                                        <CheckCircle className="h-4 w-4" />
-                                        Matched Skills
-                                    </h4>
-                                    <ul className="text-sm text-gray-300 space-y-1">
-                                        {matchedSkills.map((skill, idx) => (
-                                            <li key={idx}>• {skill}</li>
-                                        ))}
-                                    </ul>
-                                </div>
-                                <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4">
-                                    <h4 className="text-red-400 font-medium mb-2 flex items-center gap-2">
-                                        <XCircle className="h-4 w-4" />
-                                        Skill Gaps
-                                    </h4>
-                                    <ul className="text-sm text-gray-300 space-y-1">
-                                        {skillGaps.map((skill, idx) => (
-                                            <li key={idx}>• {skill}</li>
-                                        ))}
-                                    </ul>
-                                </div>
-                            </div>
-                        )}
-
-                        {analysis && (
-                            <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
-                                <h3 className="text-sm font-medium text-gray-300 mb-4 flex items-center gap-2">
-                                    <TrendingUp className="h-4 w-4 text-orange-500" />
-                                    Full Analysis & Recommendations
-                                </h3>
-                                <div className="bg-gray-950 border border-gray-800 rounded-lg p-4 max-h-[300px] overflow-auto">
-                                    <div className="prose prose-invert prose-sm max-w-none">
-                                        <ReactMarkdown>{analysis}</ReactMarkdown>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {!analysis && !error && (
-                            <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 min-h-[300px] flex flex-col items-center justify-center">
-                                <BarChart3 className="h-16 w-16 mb-4 opacity-20 text-orange-500" />
-                                <p className="text-sm text-gray-500 text-center">
-                                    Paste a job description to see how <br />
-                                    your skills match up
-                                </p>
-                                <p className="text-xs text-gray-600 mt-2">
-                                    Powered by Gemini 2.5 Flash
-                                </p>
-                            </div>
-                        )}
+                        <MatchScoreCard matchPercentage={matchPercentage} />
+                        <SkillComparisonGrid matchedSkills={matchedSkills} skillGaps={skillGaps} />
+                        {!error && <AnalysisResults analysis={analysis} />}
                     </div>
                 </div>
             </div>
