@@ -33,7 +33,8 @@ export function JobsClient({ jobs, internships, userSkills, query, isManualSearc
             {/* Section 1: Recommended for You (Filtered) */}
             <RecommendedJobs
                 userSkills={userSkillsArray}
-                jobs={allJobs}
+                jobs={jobs}
+                internships={internships}
             />
 
             {/* Section 2: Explore All Jobs (Unfiltered) */}

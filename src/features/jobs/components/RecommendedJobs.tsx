@@ -199,11 +199,12 @@ export function RecommendedJobs({ userSkills, jobs, internships, loading }: Reco
                     <JobCard
                         key={job.id}
                         job={job}
-                        matchScore={job.matchScore}
-                        matchedSkills={job.matchedSkills}
-                        missingSkills={job.missingSkills}
-                        badgeText={`${job.matchScore}% Match`}
-                        badgeVariant="purple"
+                        matchAnalysis={{
+                            score: job.matchScore,
+                            matchedSkills: job.matchedSkills,
+                            missingSkills: job.missingSkills,
+                            explanation: job.explanation,
+                        }}
                     />
                 ))}
             </div>
