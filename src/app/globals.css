@@ -1,44 +1,61 @@
 @import "tailwindcss";
 
 :root {
-  /* Indigo / Blue Gradient - Primary */
-  --primary: #4F46E5;
-  /* indigo-600 */
-  --primary-foreground: #ffffff;
-  --primary-hover: #4338ca;
-  /* indigo-700 */
+  /* Professional Theme: Indigo & Slate */
 
-  /* Slate / Gray - Secondary & Backgrounds */
-  --background: #ffffff;
-  /* slate-50 */
+  /* Backgrounds */
+  --background: #F8FAFC;
+  /* Slate-50 - softer than pure white */
   --foreground: #0F172A;
-  /* slate-900 */
-  --card: #ffffff;
+  /* Slate-900 */
+
+  /* Cards & Surfaces */
+  --card: #FFFFFF;
   --card-foreground: #0F172A;
+  --popover: #FFFFFF;
+  --popover-foreground: #0F172A;
+
+  /* Primary Brand - Indigo */
+  --primary: #4338CA;
+  /* Indigo-700 */
+  --primary-foreground: #FFFFFF;
+  --primary-hover: #3730A3;
+  /* Indigo-800 */
+
+  /* Secondary/Muted */
+  --secondary: #F1F5F9;
+  /* Slate-100 */
+  --secondary-foreground: #334155;
+  /* Slate-700 */
   --muted: #F1F5F9;
-  /* slate-100 */
   --muted-foreground: #64748B;
-  /* slate-500 */
-  --border: #E2E8F0;
-  /* slate-200 */
+  /* Slate-500 */
 
-  /* Emerald / Green - Accent & Success */
-  --accent: #10B981;
-  /* emerald-500 */
-  --success: #10B981;
-  --success-foreground: #ffffff;
+  /* Accents */
+  --accent: #EEF2FF;
+  /* Indigo-50 */
+  --accent-foreground: #4338CA;
+  /* Indigo-700 */
 
-  /* Amber - Warning */
-  --warning: #F59E0B;
-  /* amber-500 */
-  --warning-foreground: #ffffff;
-
-  /* Red - Error */
+  /* Functional Colors */
   --destructive: #EF4444;
-  /* red-500 */
-  --destructive-foreground: #ffffff;
+  --destructive-foreground: #FFFFFF;
+  --success: #10B981;
+  --success-foreground: #FFFFFF;
+  --warning: #F59E0B;
+  --warning-foreground: #FFFFFF;
+  --info: #3B82F6;
+  --info-foreground: #FFFFFF;
 
-  --radius: 0.5rem;
+  /* Borders & Inputs */
+  --border: #E2E8F0;
+  /* Slate-200 */
+  --input: #E2E8F0;
+  --ring: #4338CA;
+  /* Indigo-700 */
+
+  --radius: 0.75rem;
+  /* 12px - Modern rounded corners */
 }
 
 /* Dark Mode Overrides - DISABLED for Professional White Theme */

@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { BackButton } from "@/components/ui/BackButton";
 import { JobsSearch } from "@/features/jobs/components/JobsSearch";
 import { RecommendedJobs } from "@/features/jobs/components/RecommendedJobs";
-import { Sparkles } from "lucide-react";
+import { Sparkles, Briefcase } from "lucide-react";
 
 export default async function RecommendedJobsPage({
     searchParams,

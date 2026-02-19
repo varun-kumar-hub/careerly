@@ -130,11 +130,17 @@ export function RecommendedJobs({ userSkills, jobs, internships, loading }: Reco
                     Jobs matched based on your profile and resume.
                 </p>
 
-                <div className="bg-gray-50 border border-gray-100 rounded-xl p-8 text-center">
-                    <AlertCircle className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                    <p className="text-gray-600">
-                        No job matches found for your current skills. Check out &quot;Explore All Jobs&quot; below!
+                <div className="flex flex-col items-center justify-center py-16 bg-white rounded-xl border border-dashed border-slate-300 text-center">
+                    <Briefcase className="h-10 w-10 text-slate-300 mb-3" />
+                    <p className="text-slate-500 font-medium mb-2">
+                        No job matches found for your current skills.
                     </p>
+                    <Link
+                        href="/jobs"
+                        className="text-primary hover:underline font-medium text-sm"
+                    >
+                        Explore all jobs
+                    </Link>
                 </div>
             </section>
         );

@@ -77,6 +77,13 @@ export async function searchJobs(
         .order('posted_date', { ascending: false })
         .limit(60);
 
+    if (type === 'job') {
+        dbQuery = dbQuery.or('job_type.eq.job,job_type.is.null');
+    } else if (type === 'internship') {
+        // jobs.job_type = 'internship' OR title contains "intern"
+        dbQuery = dbQuery.or('job_type.eq.internship,title.ilike.%intern%');
+    }
+
     // ... (rest of search logic same as before) ...
 
     const { data: dbJobs, error } = await dbQuery;
